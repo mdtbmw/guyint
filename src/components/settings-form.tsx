@@ -371,12 +371,3 @@ export function SettingsForm() {
     </div>
   );
 }
-
-// Add a placeholder `bio` to settings
-declare module '@/lib/state/settings' {
-    interface Settings {
-        bio?: string;
-    }
-}
-
-    
