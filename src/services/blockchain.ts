@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createPublicClient, http, formatEther, parseEther, Hex, Address, Hash, WalletClient, PublicClient, getAddress, UserRejectedRequestError, TransactionReceipt, decodeEventLog } from 'viem';
@@ -271,33 +272,48 @@ class IntuitionService {
     const fromBlock = 0n;
 
     try {
+      const betPlacedEvent = IntuitionBettingAbi.find((item) => item.type === 'event' && item.name === 'BetPlaced');
+      const winningsClaimedEvent = IntuitionBettingAbi.find((item) => item.type === 'event' && item.name === 'WinningsClaimed');
+      const eventCanceledEvent = IntuitionBettingAbi.find((item) => item.type === 'event' && item.name === 'EventCanceled');
+
+      if (!betPlacedEvent || !winningsClaimedEvent || !eventCanceledEvent) {
+          throw new Error("Could not find required ABI event definitions.");
+      }
+
       const [betPlacedLogs, winningsClaimedLogs, eventCanceledLogs] = await Promise.all([
         this.publicClient.getLogs({
           address: address,
-          event: IntuitionBettingAbi.find((item) => item.type === 'event' && item.name === 'BetPlaced'),
+          event: betPlacedEvent,
           args: userAddress ? { user: userAddress } : undefined,
           fromBlock,
           toBlock: 'latest',
         }),
         this.publicClient.getLogs({
           address: address,
-          event: IntuitionBettingAbi.find((item) => item.type === 'event' && item.name === 'WinningsClaimed'),
+          event: winningsClaimedEvent,
           args: userAddress ? { user: userAddress } : undefined,
           fromBlock,
           toBlock: 'latest',
         }),
         this.publicClient.getLogs({
           address: address,
-          event: IntuitionBettingAbi.find((item) => item.type === 'event' && item.name === 'EventCanceled'),
+          event: eventCanceledEvent,
           fromBlock,
           toBlock: 'latest',
         }),
       ]);
 
+      const decodeLogs = (logs: any[], eventAbi: any) => {
+        return logs.map(log => {
+          const decoded = decodeEventLog({ abi: [eventAbi], ...log });
+          return { ...(decoded.args as object), blockNumber: log.blockNumber };
+        })
+      }
+
       return {
-        betPlaced: betPlacedLogs.map(log => ({ ...log.args, blockNumber: log.blockNumber })),
-        winningsClaimed: winningsClaimedLogs.map(log => ({ ...log.args, blockNumber: log.blockNumber })),
-        eventCanceled: eventCanceledLogs.map(log => ({ ...log.args, blockNumber: log.blockNumber })),
+        betPlaced: decodeLogs(betPlacedLogs, betPlacedEvent),
+        winningsClaimed: decodeLogs(winningsClaimedLogs, winningsClaimedEvent),
+        eventCanceled: decodeLogs(eventCanceledLogs, eventCanceledEvent),
       };
     } catch (e) {
       console.error("Failed to fetch logs:", e);
