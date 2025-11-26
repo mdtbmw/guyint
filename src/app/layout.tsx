@@ -1,4 +1,3 @@
-
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -9,9 +8,9 @@ import MainLayout from '@/components/layout/main-layout';
 import Head from 'next/head';
 import { Web3Provider } from '@/components/web3-provider';
 import { Provider as JotaiProvider } from 'jotai';
-import { NotificationsProvider } from '@/lib/state/notifications.tsx';
+import { NotificationsProvider } from '@/lib/state/notifications';
 import { SettingsProvider } from '@/lib/state/settings';
-import { HeaderStateProvider } from '@/lib/state/header.tsx';
+import { HeaderStateProvider } from '@/lib/state/header';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const spaceGrotesk = SpaceGrotesk({ subsets: ['latin'], variable: '--font-space-grotesk' });
