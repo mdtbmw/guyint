@@ -303,18 +303,19 @@ class IntuitionService {
         }),
       ]);
 
-      const decodeLogs = (logs: any[], eventAbi: any) => {
+      const decodeLogs = <T extends { eventName: string, args: any }>(logs: any[], eventAbi: any): (T['args'] & { blockNumber: bigint })[] => {
         return logs.map(log => {
           const decoded = decodeEventLog({ abi: [eventAbi], ...log });
-          return { ...(decoded.args as object), blockNumber: log.blockNumber };
+          return { ...(decoded.args as T['args']), blockNumber: log.blockNumber };
         })
       }
 
       return {
-        betPlaced: decodeLogs(betPlacedLogs, betPlacedEvent),
-        winningsClaimed: decodeLogs(winningsClaimedLogs, winningsClaimedEvent),
-        eventCanceled: decodeLogs(eventCanceledLogs, eventCanceledEvent),
+        betPlaced: decodeLogs<{ eventName: 'BetPlaced', args: { eventId: bigint, user: Address, outcome: boolean, amount: bigint } }>(betPlacedLogs, betPlacedEvent),
+        winningsClaimed: decodeLogs<{ eventName: 'WinningsClaimed', args: { eventId: bigint, user: Address, amount: bigint } }>(winningsClaimedLogs, winningsClaimedEvent),
+        eventCanceled: decodeLogs<{ eventName: 'EventCanceled', args: { eventId: bigint } }>(eventCanceledLogs, eventCanceledEvent),
       };
+
     } catch (e) {
       console.error("Failed to fetch logs:", e);
       return { betPlaced: [], winningsClaimed: [], eventCanceled: [] };
