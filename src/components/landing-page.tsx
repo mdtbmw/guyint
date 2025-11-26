@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useWallet } from '@/hooks/use-wallet';
 import { cn } from '@/lib/utils';
 import { DynamicIcon } from '@/lib/icons';
@@ -10,22 +10,21 @@ import { Logo } from '@/components/ui/logo';
 const SpotlightCard = ({ children, className }: { children: React.ReactNode; className?: string }) => {
     const cardRef = useRef<HTMLDivElement>(null);
 
-    const handleMouseMove = useCallback((e: MouseEvent) => {
-        const card = cardRef.current;
-        if (!card) return;
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        card.style.setProperty('--mouse-x', `${x}px`);
-        card.style.setProperty('--mouse-y', `${y}px`);
-    }, []);
-
     useEffect(() => {
         const card = cardRef.current;
         if (!card) return;
+        
+        const handleMouseMove = (e: MouseEvent) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            card.style.setProperty('--mouse-x', `${x}px`);
+            card.style.setProperty('--mouse-y', `${y}px`);
+        };
+        
         card.addEventListener('mousemove', handleMouseMove);
         return () => card.removeEventListener('mousemove', handleMouseMove);
-    }, [handleMouseMove]);
+    }, []);
 
     return <div ref={cardRef} className={cn("spotlight-card", className)}>{children}</div>;
 };
@@ -158,7 +157,7 @@ export function LandingPage() {
                                 </div>
                                 <span className="text-gold-400 text-[10px] font-bold border border-gold-500/30 px-3 py-1 rounded-full bg-gold-500/5 group-hover:bg-gold-500 group-hover:text-black transition-colors">FINANCE</span>
                             </div>
-                            <h3 className="text-white font-display text-2xl leading-tight mb-6 group-hover:text-gold-400 transition-colors">BTC closes > $100k?</h3>
+                            <h3 className="text-white font-display text-2xl leading-tight mb-6 group-hover:text-gold-400 transition-colors">BTC closes {'>'} $100k?</h3>
                             <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden mb-4">
                                 <div className="h-full bg-gradient-to-r from-gold-600 to-gold-300 w-[72%] shadow-[0_0_15px_rgba(245,158,11,0.6)]"></div>
                             </div>
