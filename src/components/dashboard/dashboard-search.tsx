@@ -75,7 +75,7 @@ export function DashboardSearch({ searchTerm, setSearchTerm }: DashboardSearchPr
       <div className="relative flex items-center h-16 md:h-20 px-6 border border-border rounded-[1.5rem] overflow-hidden">
         <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent animate-scan pointer-events-none opacity-50"></div>
         
-        <span className="text-primary font-mono text-lg mr-3">>_</span>
+        <span className="text-primary font-mono text-lg mr-3">{'>'}_</span>
         <Input
           id="dashboard-search-input"
           ref={inputRef}
