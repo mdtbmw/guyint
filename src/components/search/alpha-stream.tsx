@@ -42,7 +42,7 @@ export const AlphaStream = () => {
                 const betLogs = allLogs.betPlaced
                     .map((log, index) => {
                         const event = eventsMap.get(String(log.eventId));
-                        if (!log.user || !event) return null;
+                        if (!log.user || !event || typeof log.amount === 'undefined') return null;
                         
                         const amount = parseFloat(formatEther(log.amount)).toFixed(2);
                         return {
