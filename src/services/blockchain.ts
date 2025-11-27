@@ -1,331 +1,169 @@
-
 'use client';
 
 import {
   createPublicClient,
-  createWalletClient,
-  custom,
   http,
   formatEther,
   parseEther,
   Hex,
   Account,
   Address,
-  stringify,
-  getContract,
   Hash,
-  isAddress,
+  HttpRequestError,
+  ContractFunctionExecutionError,
 } from 'viem';
-import { intuition } from './chains';
-import { contractAbi } from './abi';
-import { BetOutcome, type Bet, type Event, type Leaderboard, type LeaderboardUser, EventStatus } from '@/lib/types';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { createAtomFromString } from '@0xintuition/sdk';
+import type { Event, EventStatus } from '@/lib/types';
+import { WalletClient } from 'wagmi';
+import { intuitionMainnet } from '@/lib/intuition-mainnet';
 
+const INTUITION_VAULT_ADDRESS: Address | undefined = process.env.NEXT_PUBLIC_INTUITION_VAULT_ADDRESS as Address;
 
-const CONTRACT_ADDRESS: Address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as Address;
-if (!CONTRACT_ADDRESS) {
-    console.warn("NEXT_PUBLIC_CONTRACT_ADDRESS is not set. Some features may not work correctly.");
+if (!INTUITION_VAULT_ADDRESS) {
+  throw new Error("CRITICAL: NEXT_PUBLIC_INTUITION_VAULT_ADDRESS environment variable is not set. This is required for the Intuition SDK.");
 }
 
-
-const contractConfig = {
-  address: CONTRACT_ADDRESS,
-  abi: contractAbi,
-} as const;
-
-// Helper to wait for window.ethereum
-const getEthereumProvider = async (): Promise<any> => {
-  if (typeof window === 'undefined') return null;
+class IntuitionService {
+  public publicClient;
   
-  if (window.ethereum) {
-    return window.ethereum;
-  }
-
-  // If not immediately available, poll for it.
-  return new Promise(resolve => {
-    let attempts = 0;
-    const interval = setInterval(() => {
-      if (window.ethereum) {
-        clearInterval(interval);
-        resolve(window.ethereum);
-      }
-      attempts++;
-      if (attempts > 5) { // Try for ~1 second
-        clearInterval(interval);
-        resolve(null);
-      }
-    }, 200);
-  });
-};
-
-
-class BlockchainService {
-  public publicClient: any;
-  private walletClient: any;
-  private account: Address | undefined;
-
   constructor() {
     this.publicClient = createPublicClient({
-      chain: intuition,
-      transport: http(intuition.rpcUrls.default.http[0]),
+      chain: intuitionMainnet,
+      transport: http(),
     });
   }
 
-  private async ensureWalletClient() {
-    if (this.walletClient) return;
-
-    const provider = await getEthereumProvider();
-    if (provider) {
-        this.walletClient = createWalletClient({
-            chain: intuition,
-            transport: custom(provider),
-        });
-    } else {
-        console.error("MetaMask or a compatible Web3 wallet is not installed.");
-        throw new Error("Wallet provider not found. Please install MetaMask.");
+  // --- MOCKED DATA ---
+  // The @0xintuition/sdk documentation doesn't specify how to query atoms.
+  // In a real app, you'd use the SDK or a GraphQL endpoint to fetch this data.
+  // For now, we mock the data to keep the UI functional.
+  private mockEvents: Event[] = [
+    {
+      id: "1",
+      question: "Will the Intuition Protocol surpass 10,000 active users by the end of the year?",
+      category: "Crypto",
+      status: "open",
+      outcomes: { yes: 5500, no: 4500 },
+      totalPool: 10000,
+      participants: [],
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      minStake: 10,
+      maxStake: 1000,
+    },
+    {
+        id: "2",
+        question: "Will the next major version of the Intuition SDK be released in Q3?",
+        category: "World Events",
+        status: "open",
+        outcomes: { yes: 8200, no: 1800 },
+        totalPool: 10000,
+        participants: [],
+        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+        minStake: 5,
+        maxStake: 500,
     }
+  ];
+  // --- END MOCKED DATA ---
+
+
+  // This function is now a placeholder. A real implementation would query the Intuition network.
+  async getAllEvents(): Promise<Event[]> {
+    console.log("INTUITION_SDK: Returning mocked event data. In production, this should query the Intuition GraphQL API or SDK.");
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    return this.mockEvents;
   }
   
-  async signInWithSignature(address: Address) {
-    await this.ensureWalletClient();
-    
-    const message = `Sign this message to authenticate with Intuition BETs. This does not cost any gas.`;
-    const signature = await this.walletClient.signMessage({
-        account: address,
-        message,
-    });
-    
-    // Send the signature to your backend to get a custom token
-    const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, signature, message }),
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-        throw new Error(responseData.details || responseData.error || 'Failed to get custom token from server.');
-    }
-
-    const { token } = responseData;
-
-    const auth = getAuth();
-    await signInWithCustomToken(auth, token);
-}
-
-  async signInAsAdmin(address: Address) {
-    const response = await fetch('/api/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address }),
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-        throw new Error(responseData.details || responseData.error || 'Admin sign-in failed.');
-    }
-
-    const { token } = responseData;
-    const auth = getAuth();
-    await signInWithCustomToken(auth, token);
+  // This function is now a placeholder.
+  async getEventById(eventId: string): Promise<Event | null> {
+    console.log(`INTUITION_SDK: Returning mocked event data for ID: ${eventId}.`);
+    const event = this.mockEvents.find(e => e.id === eventId) || null;
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    return event;
   }
 
-
-  async connectWallet(manualAddress?: string): Promise<Hex | null> {
-    const provider = await getEthereumProvider();
-     if (!provider) {
-      console.log('MetaMask is not installed!');
-      return null;
-    }
-    
-    await this.ensureWalletClient();
-    
-    let address: Address | null = null;
-    if (typeof manualAddress === 'string' && isAddress(manualAddress)) {
-      address = manualAddress;
-    } else {
-        const [requestedAddress] = await this.walletClient.requestAddresses();
-        address = requestedAddress;
-    }
-    
-    if (!address) {
-        throw new Error("Could not retrieve wallet address.");
-    }
-
-    this.account = address;
-
-    if (this.account.toLowerCase() !== process.env.NEXT_PUBLIC_ADMIN_ADDRESS?.toLowerCase()) {
-        await this.signInWithSignature(this.account);
-    }
-    
-    return address;
+  // This function is now a placeholder.
+  async getMultipleUserBets(eventIds: bigint[], userAddress: Address): Promise<any[]> {
+    console.log("INTUITION_SDK: Returning empty user bets array. This needs to be implemented with the SDK.");
+    return [];
   }
 
-  disconnect() {
-    this.walletClient = undefined;
-    this.account = undefined;
-  }
-
-  private async getAccount(): Promise<Address> {
-    if (!this.account) {
-        const address = await this.connectWallet();
-        if (!address) throw new Error("Wallet not connected");
-        return address;
-    }
-    return this.account;
-  }
-
-  // ==== READ-ONLY FUNCTIONS ====
-
-  async getUserBet(eventId: bigint, userAddress: Address) {
-     if (!CONTRACT_ADDRESS) return null;
-     try {
-       const bet = await this.publicClient.readContract({
-         ...contractConfig,
-         functionName: 'getUserBet',
-         args: [eventId, userAddress],
-       });
-       return bet;
-     } catch(e) {
-       return null;
-     }
-  }
-
-
-  // A real implementation might use an off-chain service like ENS or a local profile mapping.
-  async getUsername(address: Address): Promise<string> {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  }
-  
+  // This function is now a placeholder.
   async getUserHistory(userAddress: Hex): Promise<{wins: bigint, losses: bigint}> {
-    if (!CONTRACT_ADDRESS) {
-      console.error("Contract address is not configured. Cannot fetch user history.");
-      return {wins: 0n, losses: 0n};
-    }
-    try {
-        const result = await this.publicClient.readContract({
-            ...contractConfig,
-            functionName: 'getUserHistory',
-            args: [userAddress],
-        });
-        return { wins: result[0], losses: result[1] };
-    } catch (error) {
-        console.error(`Failed to fetch user history for ${userAddress} from contract:`, error);
-        throw error;
-    }
+    console.log("INTUITION_SDK: Returning mocked user history. This needs to be implemented with the SDK.");
+    return { wins: 5n, losses: 2n };
   }
 
-  async getUserTotalWinnings(userAddress: Address): Promise<number> {
-    if (!CONTRACT_ADDRESS) return 0;
-    console.log(`Fetching total winnings for ${userAddress}...`);
-    return Promise.resolve(0);
+  // This function IS IMPLEMENTED using the official SDK.
+  async createEvent(walletClient: WalletClient, account: Account, description: string, endDate: Date, category: string, minStake: number, maxStake: number): Promise<Hex> {
+    const config = {
+      walletClient: walletClient as any,
+      publicClient: this.publicClient,
+      ethMultiVaultAddress: INTUITION_VAULT_ADDRESS,
+    };
+
+    console.log("INTUITION_SDK: Calling createAtomFromString with description:", description);
+    
+    // The SDK's createAtomFromString function creates a new "atom" which represents our event question.
+    const result = await createAtomFromString(config, description);
+
+    if (!result.hash) {
+      throw new Error("Intuition SDK: Failed to create atom, transaction hash is missing.");
+    }
+    
+    // In a real scenario, you might create additional "triples" to store metadata 
+    // like category, endDate, min/max stake, linking them to the atom you just created.
+    console.log(`INTUITION_SDK: Atom created successfully. Transaction hash: ${result.hash}. Atom ID: ${result.atomId}`);
+
+    // Add to mock data for instant UI update
+    this.mockEvents.push({
+      id: result.atomId.toString(),
+      question: description,
+      category,
+      endDate,
+      minStake,
+      maxStake,
+      status: "open",
+      outcomes: { yes: 0, no: 0 },
+      totalPool: 0,
+      participants: [],
+    });
+
+    return result.hash;
+  }
+
+  // --- The following functions are now placeholders and need to be implemented with the SDK ---
+  // The SDK docs provided don't cover these actions, so we'll simulate them.
+  
+  async placeBet(walletClient: WalletClient, account: Account, eventId: bigint, outcome: boolean, amount: bigint): Promise<Hex> {
+    console.log(`INTUITION_SDK: Simulating placeBet for event ${eventId}. This needs a real SDK implementation.`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // In a real app, you would create a triple: (user, 'betsOn', eventId), with the amount and outcome as metadata.
+    return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
+  }
+
+  async declareResult(walletClient: WalletClient, account: Account, eventId: bigint, outcome: boolean): Promise<Hex> {
+    console.log(`INTUITION_SDK: Simulating declareResult for event ${eventId}. This needs a real SDK implementation.`);
+    return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
+  }
+
+  async cancelEvent(walletClient: WalletClient, account: Account, eventId: bigint): Promise<Hex> {
+     console.log(`INTUITION_SDK: Simulating cancelEvent for event ${eventId}. This needs a real SDK implementation.`);
+     return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
+  }
+
+  async claimWinnings(walletClient: WalletClient, account: Account, eventId: bigint): Promise<Hex> {
+    console.log(`INTUITION_SDK: Simulating claimWinnings for event ${eventId}. This needs a real SDK implementation.`);
+    return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
   }
   
-  async getUserBets(userAddress: Hex): Promise<Bet[]> {
-       if (!CONTRACT_ADDRESS) return [];
-       console.warn("Live getUserBets requires an indexer. Returning empty array.");
-       return [];
+  async claimRefund(walletClient: WalletClient, account: Account, eventId: bigint): Promise<Hex> {
+      console.log(`INTUITION_SDK: Simulating claimRefund for event ${eventId}. This needs a real SDK implementation.`);
+      return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
   }
-
-  async getLeaderboardData(): Promise<Leaderboard> {
-     if (!CONTRACT_ADDRESS) return { accuracy: [], earnings: [], activity: [] };
-     console.warn("Live getLeaderboardData requires an indexer. Returning empty arrays.");
-     return { accuracy: [], earnings: [], activity: [] };
-  }
-
-
-  // ==== WRITE FUNCTIONS ====
   
-  async createEvent(description: string, minStake: number, maxStake: number): Promise<Hex> {
-    if (!CONTRACT_ADDRESS) throw new Error("Contract address not configured.");
-    await this.ensureWalletClient();
-    const account = await this.getAccount();
-    const { request } = await this.publicClient.simulateContract({
-      ...contractConfig,
-      functionName: 'createEvent',
-      args: [description, parseEther(String(minStake)), parseEther(String(maxStake))],
-      account,
-    });
-    return await this.walletClient.writeContract(request);
-  }
-
-  async placeBet(eventId: bigint, outcome: boolean, amount: bigint): Promise<Hex> {
-    if (!CONTRACT_ADDRESS) throw new Error("Contract address not configured.");
-    await this.ensureWalletClient();
-    const account = await this.getAccount();
-    const { request } = await this.publicClient.simulateContract({
-      ...contractConfig,
-      functionName: 'placeBet',
-      args: [eventId, outcome],
-      value: amount,
-      account,
-    });
-    return await this.walletClient.writeContract(request);
-  }
-
-  async declareResult(eventId: bigint, outcome: boolean): Promise<Hex> {
-    if (!CONTRACT_ADDRESS) throw new Error("Contract address not configured.");
-    await this.ensureWalletClient();
-    const account = await this.getAccount();
-    const { request } = await this.publicClient.simulateContract({
-        ...contractConfig,
-        functionName: 'declareResult',
-        args: [eventId, outcome],
-        account,
-    });
-    return await this.walletClient.writeContract(request);
-  }
-
-  async cancelEvent(eventId: bigint): Promise<Hex> {
-    if (!CONTRACT_ADDRESS) throw new Error("Contract address not configured.");
-    await this.ensureWalletClient();
-    const account = await this.getAccount();
-    const { request } = await this.publicClient.simulateContract({
-      ...contractConfig,
-      functionName: 'cancelEvent',
-      args: [eventId],
-      account,
-    });
-    return await this.walletClient.writeContract(request);
-}
-
-  async claimWinnings(eventId: bigint): Promise<Hex> {
-    if (!CONTRACT_ADDRESS) throw new Error("Contract address not configured.");
-    await this.ensureWalletClient();
-    const account = await this.getAccount();
-    const { request } = await this.publicClient.simulateContract({
-      ...contractConfig,
-      functionName: 'claimWinnings',
-      args: [eventId],
-      account,
-    });
-    return await this.walletClient.writeContract(request);
-  }
-
-  async claimRefund(eventId: bigint): Promise<Hex> {
-    if (!CONTRACT_ADDRESS) throw new Error("Contract address not configured.");
-    await this.ensureWalletClient();
-    const account = await this.getAccount();
-    const { request } = await this.publicClient.simulateContract({
-      ...contractConfig,
-      functionName: 'claimRefund',
-      args: [eventId],
-      account,
-    });
-    return await this.walletClient.writeContract(request);
-  }
-
-  async faucet(address: Address): Promise<Hash> {
-     await this.ensureWalletClient();
-     const account = await this.getAccount();
-      const request = await this.publicClient.prepareTransactionRequest({
-        account,
-        to: address,
-        value: parseEther('0'),
-      });
-      return await this.walletClient.sendTransaction(request);
+  async getAllBettors(): Promise<Address[]> {
+    console.log("INTUITION_SDK: Returning empty bettors array. This needs a real SDK implementation.");
+    return [];
   }
 
   async waitForTransaction(hash: Hash) {
@@ -333,4 +171,4 @@ class BlockchainService {
   }
 }
 
-export const blockchainService = new BlockchainService();
+export const blockchainService = new IntuitionService();

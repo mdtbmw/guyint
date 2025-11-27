@@ -17,8 +17,7 @@ export const iconList = [
     'Grape', 'Grid', 'Hammer', 'Heart', 'HelpCircle', 'Home', 'Hourglass',
     'IceCream', 'Image', 'Infinity', 'Joystick', 'Key', 'Landmark', 'Languages',
     'Laptop', 'Leaf', 'Library', 'LifeBuoy', 'Lightbulb', 'LineChart', 'Link',
-
-    'Lock', 'Magnet', 'Map', 'Medal', 'Megaphone', 'Menu', 'Mic', 'Milestone',
+    'Lock', 'Magnet', 'Map', 'Medal', 'Menu', 'Megaphone', 'Menu', 'Mic', 'Milestone',
     'Moon', 'Mouse', 'Music', 'Navigation', 'Newspaper', 'Palette', 'Paperclip',
     'Pen', 'Percent', 'PersonStanding', 'Phone', 'PieChart', 'PiggyBank', 'Pilcrow',
     'Pizza', 'Plane', 'Plug', 'Pocket', 'Podcast', 'Power', 'Presentation', 'Printer',

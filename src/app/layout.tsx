@@ -3,15 +3,16 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
 import MainLayout from '@/components/layout/main-layout';
+import Head from 'next/head';
+import { Web3Provider } from '@/components/web3-provider';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Intuition BETs',
+  title: 'Intuition BET',
   description: 'A decentralized betting platform for your intuition.',
 };
 
@@ -22,24 +23,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-neutral-950 text-white antialiased selection:bg-indigo-500/30 selection:text-indigo-100", inter.className)} suppressHydrationWarning>
+      <Head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+      </Head>
+      <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem={false}
           disableTransitionOnChange
         >
-          <FirebaseClientProvider>
-             <div className="relative min-h-screen flex flex-col">
-                  {/* Ambient background */}
-                  <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-                    <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-fuchsia-500/15 blur-3xl"></div>
-                    <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl"></div>
-                    <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-3xl"></div>
-                  </div>
-              <MainLayout>{children}</MainLayout>
-            </div>
-          </FirebaseClientProvider>
+          <Web3Provider>
+            <MainLayout>{children}</MainLayout>
+          </Web3Provider>
           <Toaster />
         </ThemeProvider>
       </body>

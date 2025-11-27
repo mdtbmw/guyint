@@ -13,28 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Bet, Event } from "@/lib/types";
 import { CheckCircle, XCircle, Clock, RotateCw, Check, Ticket, Loader2 } from "lucide-react";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useWallet } from "@/hooks/use-wallet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useCollection, useFirestore } from "@/firebase";
-import { collection, query } from "firebase/firestore";
 import { blockchainService } from "@/services/blockchain";
 import { formatEther } from "viem";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { MobilePageHeader } from "@/components/layout/mobile-page-header";
 
 const getOutcomeBadge = (outcome: Bet['outcome']) => {
   switch (outcome) {
@@ -82,62 +70,76 @@ export default function MyBetsPage() {
   const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
-  const { address, connected, fetchBalance } = useWallet();
+  const { address, connected, fetchBalance, walletClient } = useWallet();
   const router = useRouter();
   const { toast } = useToast();
-  const firestore = useFirestore();
-
-  const eventsQuery = useMemo(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'events'));
-  }, [firestore]);
-
-  const { data: events, loading: eventsLoading } = useCollection<Event>(eventsQuery);
 
   const fetchBets = useCallback(async () => {
-      if (!address || eventsLoading || !events) {
+      if (!address || !connected) {
+        setLoading(false);
         return;
       }
       try {
         setLoading(true);
-        const userBetsPromises = events.map(async (event) => {
-          const onChainBet = await blockchainService.getUserBet(BigInt(event.id), address);
+
+        const allEvents = await blockchainService.getAllEvents();
+        
+        if (allEvents.length === 0) {
+            setBets([]);
+            setLoading(false);
+            return;
+        }
+
+        const betData = await blockchainService.getMultipleUserBets(
+          allEvents.map(e => BigInt(e.id)),
+          address
+        );
+
+        const userBets: Bet[] = [];
+
+        betData.forEach((onChainBet, index) => {
           if (onChainBet && Number(formatEther(onChainBet.amount)) > 0) {
-            
+            const event = allEvents[index];
             let outcome: Bet['outcome'] = 'Pending';
             let winnings = 0;
 
-            if(event.status === 'canceled') {
+            if (event.status === 'canceled') {
               outcome = onChainBet.claimed ? 'Refunded' : 'Refundable';
+              winnings = Number(formatEther(onChainBet.amount));
             } else if (event.status === 'finished' && event.winningOutcome) {
               const userWon = (event.winningOutcome === 'YES' && onChainBet.outcome) || (event.winningOutcome === 'NO' && !onChainBet.outcome);
               if (userWon) {
                  outcome = onChainBet.claimed ? 'Claimed' : 'Won';
                  if (event.totalPool > 0) {
+                   const userStake = Number(formatEther(onChainBet.amount));
                    const winningPool = event.winningOutcome === 'YES' ? event.outcomes.yes : event.outcomes.no;
                    const totalLosingPool = event.totalPool - winningPool;
-                   winnings = (Number(formatEther(onChainBet.amount)) / winningPool) * totalLosingPool + Number(formatEther(onChainBet.amount));
+                   
+                   // More accurate winnings calculation
+                   if (winningPool > 0) {
+                    winnings = (userStake / winningPool) * totalLosingPool + userStake;
+                   } else {
+                    winnings = userStake; // Return stake if no one else bet on the winning side
+                   }
                  }
               } else {
                 outcome = 'Lost';
               }
             }
 
-            return {
+            userBets.push({
               id: `${event.id}-${address}`,
               eventId: event.id,
               eventQuestion: event.question,
               userBet: onChainBet.outcome ? 'YES' : 'NO',
               stakedAmount: Number(formatEther(onChainBet.amount)),
-              date: new Date(), // Date is not available from this data, using current date
+              date: new Date(),
               outcome: outcome,
               winnings: winnings,
-            } as Bet;
+            });
           }
-          return null;
         });
 
-        const userBets = (await Promise.all(userBetsPromises)).filter(bet => bet !== null) as Bet[];
         setBets(userBets.sort((a,b) => b.date.getTime() - a.date.getTime()));
 
       } catch (error) {
@@ -150,7 +152,7 @@ export default function MyBetsPage() {
       } finally {
         setLoading(false);
       }
-    }, [address, events, eventsLoading, toast]);
+    }, [address, connected, toast]);
 
 
   useEffect(() => {
@@ -162,11 +164,11 @@ export default function MyBetsPage() {
   }, [connected, router, fetchBets]);
 
   const handleAction = async (actionType: 'claim' | 'refund', bet: Bet) => {
-    if (!address) return;
+    if (!address || !walletClient) return;
     setActionLoading(prev => ({...prev, [bet.id]: true}));
     try {
         const actionFunction = actionType === 'claim' ? blockchainService.claimWinnings : blockchainService.claimRefund;
-        const txHash = await actionFunction(BigInt(bet.eventId));
+        const txHash = await actionFunction(walletClient, address, BigInt(bet.eventId));
         toast({
             title: "Transaction Submitted",
             description: `Waiting for confirmation... Tx: ${txHash.slice(0, 10)}...`
@@ -176,8 +178,8 @@ export default function MyBetsPage() {
             title: "Success!",
             description: `Your ${actionType === 'claim' ? 'winnings have' : 'refund has'} been sent to your wallet.`
         });
-        fetchBets(); // Re-fetch bets to update the UI
-        fetchBalance(address); // Re-fetch balance
+        fetchBets();
+        fetchBalance({ address });
     } catch (e: any) {
         console.error(e);
         toast({
@@ -186,87 +188,108 @@ export default function MyBetsPage() {
             description: e.shortMessage || 'An unexpected error occurred.'
         });
     } finally {
-        setActionLoading(prev => ({...prev, [bet.id]: false}));
+      setActionLoading(prev => ({...prev, [bet.id]: false}));
     }
-  }
-
-
-  if (!connected) {
-    return <div className="text-center py-12">Redirecting...</div>;
-  }
-
-  const renderAction = (bet: Bet) => {
-    const isLoading = actionLoading[bet.id];
-    switch (bet.outcome) {
-        case "Won":
-            return (
-                <Button size="sm" className="bg-emerald-500 hover:bg-emerald-400 text-white" onClick={() => handleAction('claim', bet)} disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Claim Winnings
-                </Button>
-            );
-        case "Refundable":
-            return (
-                 <Button size="sm" variant="outline" onClick={() => handleAction('refund', bet)} disabled={isLoading}>
-                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Claim Refund
-                </Button>
-            )
-        default:
-            return <div className="text-right text-white/50">-</div>;
+  };
+  
+    if (loading) {
+        return (
+            <div className="space-y-4">
+                <MobilePageHeader title="My Bets" />
+                <div className="hidden md:block">
+                  <PageHeader 
+                      title="My Betting History"
+                      description="Your on-chain record of predictions, outcomes, and winnings."
+                  />
+                </div>
+                <div className="border rounded-lg p-0">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-1/3">Event</TableHead>
+                                <TableHead>Your Bet</TableHead>
+                                <TableHead>Staked</TableHead>
+                                <TableHead>Outcome</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {Array.from({length: 5}).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                                    <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-9 w-28 ml-auto" /></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+        )
     }
-  }
 
   return (
     <div className="space-y-4">
+      <MobilePageHeader title="My Bets" />
+      <div className="hidden md:block">
         <PageHeader 
           title="My Betting History"
-          description="A log of all your past and present bets on the mainnet."
+          description="Your on-chain record of predictions, outcomes, and winnings."
         />
+      </div>
+      <div className="border rounded-lg p-0">
         <Table>
-        <TableHeader>
-            <TableRow className="border-b-white/10">
-                <TableHead className="text-white/70">Event</TableHead>
-                <TableHead className="text-white/70">Your Bet</TableHead>
-                <TableHead className="text-white/70 text-right">Staked</TableHead>
-                <TableHead className="text-white/70">Outcome</TableHead>
-                <TableHead className="text-white/70 text-right">Action</TableHead>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-1/3">Event</TableHead>
+              <TableHead>Your Bet</TableHead>
+              <TableHead>Staked</TableHead>
+              <TableHead>Outcome</TableHead>
+              <TableHead className="text-right">Action</TableHead>
             </TableRow>
-        </TableHeader>
-        <TableBody>
-            {loading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i} className="border-b-white/5 hover:bg-white/5">
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-12" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                     <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
-                </TableRow>
-            ))
-            ) : bets.length > 0 ? (
-            bets.map((bet) => (
-                <TableRow key={bet.id} className="border-b-white/5 hover:bg-white/5">
-                    <TableCell className="font-medium max-w-[120px] truncate">{bet.eventQuestion}</TableCell>
-                    <TableCell>
-                        <span className={cn("font-semibold", bet.userBet === "YES" ? "text-emerald-400" : "text-rose-400")}>
+          </TableHeader>
+          <TableBody>
+            {bets.length > 0 ? (
+              bets.map((bet) => (
+                <TableRow key={bet.id}>
+                  <TableCell className="font-medium max-w-sm truncate">{bet.eventQuestion}</TableCell>
+                  <TableCell>
+                    <Badge variant={bet.userBet === 'YES' ? 'default' : 'destructive'} className={cn(
+                        bet.userBet === 'YES' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                    )}>
                         {bet.userBet}
-                        </span>
-                    </TableCell>
-                    <TableCell className="text-right text-white/80">{bet.stakedAmount.toFixed(2)}</TableCell>
-                    <TableCell>{getOutcomeBadge(bet.outcome)}</TableCell>
-                    <TableCell className="text-right">{renderAction(bet)}</TableCell>
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{bet.stakedAmount.toFixed(2)} $T</TableCell>
+                  <TableCell>{getOutcomeBadge(bet.outcome)}</TableCell>
+                  <TableCell className="text-right">
+                    {(bet.outcome === "Won" || bet.outcome === "Refundable") && (
+                      <Button 
+                        size="sm"
+                        onClick={() => handleAction(bet.outcome === "Won" ? 'claim' : 'refund', bet)}
+                        disabled={actionLoading[bet.id]}
+                      >
+                         {actionLoading[bet.id] && <Loader2 className="w-4 h-4 mr-2 animate-spin"/>}
+                         Claim {bet.winnings?.toFixed(2)} $T
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
-            ))
+              ))
             ) : (
-                <TableRow className="border-b-white/5 hover:bg-white/5">
-                    <TableCell colSpan={5} className="h-24 text-center text-white/60">
-                        {"You haven't placed any bets yet."}
-                    </TableCell>
-                </TableRow>
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
+                    <Ticket className="mx-auto w-12 h-12 text-gray-500 mb-4"/>
+                    <h3 className="font-semibold text-lg">No Bets Found</h3>
+                    <p className="text-sm">You haven't placed any bets yet.</p>
+                </TableCell>
+              </TableRow>
             )}
-        </TableBody>
+          </TableBody>
         </Table>
+      </div>
     </div>
   );
 }

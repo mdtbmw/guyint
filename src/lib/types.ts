@@ -1,19 +1,11 @@
 
 import { Timestamp } from "firebase/firestore";
+import { Hex } from "viem";
 
 export type UserTier = "Rookie" | "Analyst" | "Intuitive" | "Oracle";
 
-export type User = {
-  walletAddress: string;
-  username: string;
-  avatar: string;
-  bio: string;
-  intuitionScore: number;
-  tier: UserTier;
-};
-
 export type Category = {
-  id?: string;
+  id: string;
   name: string;
   icon: string; // Lucide icon name
 }
@@ -31,8 +23,8 @@ export type Event = {
     no: number;
   };
   totalPool: number;
-  participants: number;
-  endDate: Date | Timestamp;
+  participants: Hex[];
+  endDate: Date;
   winningOutcome?: BetOutcome;
   minStake: number;
   maxStake: number;
@@ -72,12 +64,6 @@ export type LeaderboardUser = {
   value: number;
 }
 
-export type Leaderboard = {
-  accuracy: LeaderboardUser[];
-  earnings: LeaderboardUser[];
-  activity: LeaderboardUser[];
-}
-
 export type Achievement = {
   id: string;
   name: string;
@@ -92,3 +78,5 @@ export type Notification = {
   icon: React.ReactNode;
   read: boolean;
 };
+
+// UserProfile is no longer needed as we source all data from on-chain

@@ -2,126 +2,132 @@
 'use client';
 import { EventList } from '@/components/event-list';
 import { cn } from '@/lib/utils';
-import type { EventCategory, Category } from '@/lib/types';
-import { Search, Banknote, Rocket, Ticket, PlusCircle } from 'lucide-react';
-import Image from "next/image";
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { useWallet } from '@/hooks/use-wallet';
-import { useDragToScroll } from '@/hooks/use-drag-to-scroll';
-import { useAdmin } from '@/hooks/use-admin';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
-import { DynamicIcon } from '@/lib/icons';
-
+import type { Category, EventStatus } from '@/lib/types';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { mockCategories } from '@/lib/categories';
 
 export default function DashboardPage() {
-  const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
-  const { address } = useWallet();
-  const { isAdmin } = useAdmin();
-  const scrollRef = useDragToScroll<HTMLDivElement>();
-  const firestore = useFirestore();
+  const searchParams = useSearchParams();
 
-  const categoriesQuery = useMemo(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'categories'));
-  }, [firestore]);
-
-  const { data: categories, loading: categoriesLoading } = useCollection<Category>(categoriesQuery);
-
-  const handleQuickAction = (path: string) => {
-    router.push(path);
-  }
+  const getActiveStatusFromParams = () => {
+    const status = searchParams.get('status');
+    const upcoming = searchParams.get('upcoming');
+    if (upcoming === 'true') return 'upcoming';
+    if (status === 'closed') return 'closed';
+    return 'open';
+  };
   
-  const displayName = isAdmin ? 'Admin' : (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'User');
-  
+  const [activeCategory, setActiveCategory] = useState<string>(searchParams.get('category') || 'All');
+  const [activeStatus, setActiveStatus] = useState<'open' | 'upcoming' | 'closed'>(getActiveStatusFromParams());
+  const [searchTerm, setSearchTerm] = useState<string>(searchParams.get('q') || '');
+
+  // This effect ensures the component's state is always in sync with the URL's query parameters.
+  useEffect(() => {
+    setActiveCategory(searchParams.get('category') || 'All');
+    setSearchTerm(searchParams.get('q') || '');
+    setActiveStatus(getActiveStatusFromParams());
+  }, [searchParams]);
+
   const displayCategories = useMemo(() => {
     const all = [{ id: 'all', name: 'All', icon: 'Flame' }];
-    if (!categories) return all;
-    // Add sorting to ensure consistent order
-    const sortedCategories = [...categories].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedCategories = [...mockCategories].sort((a, b) => a.name.localeCompare(b.name));
     return [...all, ...sortedCategories];
-  }, [categories]);
+  }, []);
 
+  // Update URL query params when a filter changes, triggering a re-render
+  const handleFilterChange = (key: string, value: string | null) => {
+    const params = new URLSearchParams(window.location.search);
+    if (value === null || (key === 'category' && value === 'All')) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+
+    if (key === 'status') {
+       params.delete('upcoming'); // Reset upcoming flag when status is explicitly changed
+       if (value === 'upcoming') {
+         params.set('upcoming', 'true');
+         params.set('status', 'open'); // Upcoming events are technically 'open'
+       }
+    }
+    
+    router.push(`/?${params.toString()}`);
+  };
+
+  const currentStatusForFilter = useMemo((): EventStatus | EventStatus[] => {
+    const statusParam = searchParams.get('status');
+    if (statusParam === 'closed') return ['finished', 'canceled'];
+    return 'open'; // Both 'live' ('open') and 'upcoming' filter for 'open' status
+  }, [searchParams]);
+
+  const isUpcoming = searchParams.get('upcoming') === 'true';
 
   return (
     <div className="flex flex-col space-y-6">
-      <header className="relative bg-white/5 px-4 pt-3 pb-6 md:rounded-2xl ring-1 ring-white/10 md:p-6 -mx-4 md:mx-0">
-        <div className="mb-4 mt-2">
-          <h1 className="mt-1 text-[22px] tracking-tight">
-            <span className="text-white/90">Welcome, </span>
-            <span className="font-semibold text-white">{displayName}</span>
-          </h1>
-        </div>
+       <div className="flex w-full px-0 py-3">
+          <div className="flex h-12 flex-1 items-center justify-center rounded-full bg-component-dark p-1">
+            <label className="flex h-full flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-full px-2 text-sm font-medium leading-normal text-white/60 has-[:checked]:bg-primary has-[:checked]:text-black has-[:checked]:shadow-lg has-[:checked]:shadow-primary/20 sm:text-base">
+              <span className="truncate">Live</span>
+              <input 
+                checked={activeStatus === 'open'}
+                className="invisible w-0" 
+                name="event-status" 
+                type="radio" 
+                value="open"
+                onChange={() => handleFilterChange('status', 'open')}
+              />
+            </label>
+             <label className="flex h-full flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-full px-2 text-sm font-medium leading-normal text-white/60 has-[:checked]:bg-primary has-[:checked]:text-black has-[:checked]:shadow-lg has-[:checked]:shadow-primary/20 sm:text-base">
+              <span className="truncate">Upcoming</span>
+              <input 
+                checked={activeStatus === 'upcoming'}
+                className="invisible w-0" 
+                name="event-status" 
+                type="radio" 
+                value="upcoming"
+                onChange={() => handleFilterChange('status', 'upcoming')}
+              />
+            </label>
+            <label className="flex h-full flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-full px-2 text-sm font-medium leading-normal text-white/60 has-[:checked]:bg-primary has-[:checked]:text-black has-[:checked]:shadow-lg has-[:checked]:shadow-primary/20 sm:text-base">
+              <span className="truncate">Closed</span>
+              <input 
+                checked={activeStatus === 'closed'}
+                className="invisible w-0" 
+                name="event-status" 
+                type="radio" 
+                value="closed"
+                onChange={() => handleFilterChange('status', 'closed')}
+              />
+            </label>
+          </div>
+       </div>
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/60" />
-          <input
-            className="w-full rounded-xl bg-black/20 py-3 pl-10 pr-4 text-[13px] placeholder-white/60 text-white ring-1 ring-white/10 outline-none backdrop-blur-sm transition hover:ring-white/20 focus:bg-white/10 focus:ring-white/25"
-            placeholder="Search teams, leagues, markets..."
-            aria-label="Search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        <div className="mt-4">
-            {isAdmin ? (
-            <div className="p-1">
-                <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={() => handleQuickAction('/admin')} className="flex h-auto items-center justify-center gap-2 rounded-xl bg-indigo-600/20 px-3 py-3 text-sm font-medium text-indigo-300 ring-1 ring-indigo-400/20 transition hover:bg-indigo-600/30 hover:ring-indigo-400/30 active:scale-[0.98]">
-                    <DynamicIcon name="Shield" className="h-4 w-4" /> Manage Platform
-                    </Button>
-                    <Button onClick={() => handleQuickAction('/create-event')} className="flex h-auto items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-3 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-white/20 active:scale-[0.98]">
-                    <PlusCircle className="h-4 w-4" /> Create Event
-                    </Button>
-                </div>
-            </div>
-            ) : (
-            <div className="grid grid-cols-3 gap-2">
-                <Button onClick={() => handleQuickAction('/wallet')} className="flex h-auto items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-[12px] font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-white/20 active:scale-[0.98]">
-                <Banknote className="h-4 w-4" /> Wallet
-                </Button>
-                <Button onClick={() => handleQuickAction('/boosts')} className="flex h-auto items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-[12px] font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-white/20 active:scale-[0.98]">
-                <Rocket className="h-4 w-4" /> Boosts
-                </Button>
-                <Button onClick={() => handleQuickAction('/my-bets')} className="flex h-auto items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-[12px] font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-white/20 active:scale-[0.98]">
-                <Ticket className="h-4 w-4" /> My Bets
-                </Button>
-            </div>
+      <div className="flex gap-3 overflow-x-auto p-1 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {displayCategories.map(category => (
+          <button
+            key={category.id}
+            onClick={() => handleFilterChange('category', category.name)}
+            className={cn(
+              "flex h-10 shrink-0 cursor-pointer items-center justify-center gap-x-2 rounded-full px-5 text-sm transition-colors",
+              activeCategory === category.name
+                ? "bg-primary text-black font-bold"
+                : "bg-component-dark text-white/80 hover:bg-white/10"
             )}
-        </div>
-      </header>
-      
-      <div className="w-full pl-4 md:pl-0">
-        <div 
-          ref={scrollRef}
-          className="flex space-x-3 overflow-x-auto pb-2 no-scrollbar cursor-grab active:cursor-grabbing -ml-4 md:ml-0"
-        >
-          {displayCategories.map(category => (
-            <button
-              key={category.id}
-              onClick={() => setActiveCategory(category.name)}
-              className={cn(
-                "flex-shrink-0 flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-xl transition-all active:scale-95",
-                activeCategory === category.name
-                  ? "bg-primary text-white font-bold"
-                  : "bg-white/5 text-white/70 ring-1 ring-white/10 hover:bg-white/10 hover:text-white"
-              )}
-            >
-              <DynamicIcon name={category.icon} className="w-6 h-6" />
-              <span className="text-[10px] font-medium">{category.name}</span>
-            </button>
-          ))}
-        </div>
+          >
+            <span>{category.name}</span>
+          </button>
+        ))}
       </div>
 
-      <div className="px-4 md:px-0">
-        <h2 className="text-[18px] tracking-tight font-medium text-white mb-3">Today’s Yes/No Picks</h2>
-        <EventList status="open" category={activeCategory} searchTerm={searchTerm} />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <EventList 
+          status={currentStatusForFilter} 
+          category={activeCategory} 
+          searchTerm={searchTerm} 
+          isUpcoming={isUpcoming}
+        />
       </div>
     </div>
   );

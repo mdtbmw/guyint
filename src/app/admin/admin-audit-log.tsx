@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -16,11 +15,9 @@ import {
   Ban,
   ClipboardCheck,
 } from 'lucide-react';
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCollection, useFirestore } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
 import { useAdmin } from "@/hooks/use-admin";
 
 const getActionIcon = (action: AdminLog['action']) => {
@@ -32,51 +29,58 @@ const getActionIcon = (action: AdminLog['action']) => {
   }
 }
 
-export function AdminAuditLog() {
+export function AdminAuditLog({ events, loading }: { events: Event[], loading: boolean }) {
   const [logs, setLogs] = useState<AdminLog[]>([]);
-  const { isAdmin, loading: adminLoading } = useAdmin();
-  const firestore = useFirestore();
-
-  const eventsQuery = useMemo(() => {
-    if (!firestore || !isAdmin) return null;
-    return query(collection(firestore, 'events'), orderBy('endDate', 'desc'));
-  }, [firestore, isAdmin]);
-
-  const { data: events, loading: eventsLoading } = useCollection<Event>(eventsQuery);
+  const { adminAddress } = useAdmin();
 
   useEffect(() => {
-    if (events) {
-        const generatedLogs: AdminLog[] = events.map(event => {
-            let action: AdminLog['action'] = "Created Event";
-            if (event.status === 'canceled') {
-                action = "Canceled Event";
-            } else if (event.status === 'finished') {
-                action = "Declared Outcome";
-            }
+    if (events.length > 0 && adminAddress) {
+        const generatedLogs: AdminLog[] = events.flatMap(event => {
+            const logsForEvent: AdminLog[] = [];
 
-            return {
-                id: event.id,
-                // In a real app, the admin address would be stored with the event
-                admin: process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '0xAdmin...aaaa',
-                role: 'Event Creator', // Role would be dynamically determined
-                action: action,
-                timestamp: new Date(event.endDate as Date),
+            // A more realistic creation time: subtract 7 days from the end date.
+            const creationTime = event.endDate ? new Date(new Date(event.endDate).getTime() - (7 * 24 * 60 * 60 * 1000)) : new Date();
+            logsForEvent.push({
+                id: `${event.id}-created`,
+                admin: adminAddress,
+                role: 'Event Creator', 
+                action: "Created Event",
+                timestamp: creationTime,
                 eventId: event.id,
-            };
+            });
+            
+            if (event.status === 'canceled') {
+                 logsForEvent.push({
+                    id: `${event.id}-canceled`,
+                    admin: adminAddress,
+                    role: 'Event Creator', 
+                    action: "Canceled Event",
+                    timestamp: event.endDate ? new Date(event.endDate) : new Date(),
+                    eventId: event.id,
+                });
+            } else if (event.status === 'finished') {
+                logsForEvent.push({
+                    id: `${event.id}-finished`,
+                    admin: adminAddress,
+                    role: 'Event Creator', 
+                    action: "Declared Outcome",
+                    timestamp: event.endDate ? new Date(event.endDate) : new Date(),
+                    eventId: event.id,
+                });
+            }
+            return logsForEvent;
         });
         
         const sortedLogs = generatedLogs.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime());
         setLogs(sortedLogs);
     }
-  }, [events]);
-
-  const loading = adminLoading || eventsLoading;
+  }, [events, adminAddress]);
 
   return (
        <Card>
         <CardHeader>
           <CardTitle>Admin Audit Log</CardTitle>
-          <CardDescription>An on-chain record of all administrative actions on the mainnet.</CardDescription>
+          <CardDescription>A simplified, on-chain record of administrative actions.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
             <Table>

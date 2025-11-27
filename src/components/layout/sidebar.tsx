@@ -3,118 +3,62 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import React from 'react';
-import { Logo } from '../icons';
 import { useAdmin } from '@/hooks/use-admin';
 import { navLinks, type NavLink } from '@/lib/nav-links.tsx';
-import { 
-  Sidebar as SidebarPrimitive, 
-  SidebarContent, 
-  SidebarHeader, 
-  SidebarMenu, 
-  SidebarMenuItem, 
-  SidebarMenuButton, 
-  SidebarFooter,
-  useSidebar
-} from '../ui/sidebar';
+import { useRouter } from 'next/navigation';
+import { useWallet } from '@/hooks/use-wallet';
+import { Logo } from '../icons';
 
 export function Sidebar() {
   const pathname = usePathname();
   const { isAdmin } = useAdmin();
-  const { setOpenMobile } = useSidebar();
-
-  const getVisibleLinks = (group: NavLink['group']) => {
-    return navLinks.filter(l => {
-      if (l.group !== group) return false;
-      if (isAdmin) {
-        return l.group === 'admin' || l.href === '/' || l.href === '/search' || l.group === 'support';
-      }
-      return l.group !== 'admin';
-    });
-  };
-
-  const mainLinks = getVisibleLinks('main');
-  const adminLinks = getVisibleLinks('admin');
-  const supportLinks = getVisibleLinks('support');
+  const router = useRouter();
+  const { balance } = useWallet();
 
   const renderLink = (link: NavLink) => {
+    if (link.admin && !isAdmin) return null;
     const isActive = pathname === link.href;
     return (
-      <SidebarMenuItem key={link.href}>
-        <Link href={link.href} passHref legacyBehavior>
-           <SidebarMenuButton as="a" isActive={isActive} tooltip={link.label} onClick={() => setOpenMobile(false)}>
-              {React.cloneElement(link.icon as React.ReactElement, {})}
-              <span>{link.label}</span>
-            </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+      <Link
+        key={link.href}
+        href={link.href}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-white/70 transition-all hover:bg-white/10 hover:text-white",
+          isActive && "bg-white/10 font-bold text-white"
+        )}
+      >
+        {React.cloneElement(link.icon as React.ReactElement, { className: 'h-5 w-5' })}
+        {link.label}
+      </Link>
     );
   };
-  
+
+  const mainNav = navLinks.filter(l => l.group === 'main');
+  const supportNav = navLinks.filter(l => l.group === 'support');
+
   return (
-    <SidebarPrimitive>
-      <SidebarContent>
-        <SidebarHeader>
-           <div className="flex items-center gap-2">
-                <div className="bg-indigo-600 p-2 rounded-lg">
-                    <Logo className="h-6 w-6 text-white" />
-                </div>
-                <span className="text-xl font-bold">Intuition</span>
+    <aside className="hidden md:flex h-screen w-full flex-col gap-2 border-r border-border-custom bg-card-dark p-4 sticky top-0">
+        <div className="flex h-20 items-center justify-between px-2">
+             <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
+                <Logo className="w-8 h-8 text-primary" />
+                <h1 className="text-white text-2xl font-bold tracking-tighter">Intuition</h1>
             </div>
-        </SidebarHeader>
+        </div>
 
-        <SidebarMenu className="flex-1 overflow-y-auto">
-          {!isAdmin && mainLinks.length > 0 && (
-            <div className="mb-4">
-              <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 px-3">Menu</h2>
-              <div className="space-y-1">
-                {mainLinks.map(renderLink)}
-              </div>
-            </div>
-          )}
+        <div className="p-2">
+            <div className="px-3 text-sm text-muted-foreground">Balance</div>
+            <div className="text-2xl font-bold text-primary p-3">{balance.toFixed(2)} $TRUST</div>
+            <w3m-account-button />
+        </div>
 
-          {isAdmin && (
-            <>
-              <div className="mb-4">
-                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 px-3">Menu</h2>
-                <div className="space-y-1">
-                  {renderLink(navLinks.find(l => l.href === '/')!)}
-                  {renderLink(navLinks.find(l => l.href === '/search')!)}
-                </div>
-              </div>
-              <div className="mb-4">
-                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 px-3">Admin</h2>
-                <div className="space-y-1">
-                  {adminLinks.map(renderLink)}
-                </div>
-              </div>
-            </>
-          )}
-
-          {supportLinks.length > 0 && (
-            <div>
-              <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 px-3">Support</h2>
-              <div className="space-y-1">
-                {supportLinks.filter(l => l.href !== '/settings').map(renderLink)}
-              </div>
-            </div>
-          )}
-        </SidebarMenu>
-
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-                <Link href="/settings" passHref legacyBehavior>
-                    <SidebarMenuButton as="a" isActive={pathname === '/settings'} tooltip="Settings" onClick={() => setOpenMobile(false)}>
-                        <Settings />
-                        <span>Settings</span>
-                    </SidebarMenuButton>
-                </Link>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </SidebarContent>
-    </SidebarPrimitive>
+        <nav className="grid items-start gap-1 font-medium mt-4">
+          {mainNav.map(renderLink)}
+          
+          <p className="px-3 pt-4 text-xs font-semibold uppercase text-white/50">Support</p>
+          {supportNav.map(renderLink)}
+        </nav>
+    </aside>
   );
 }

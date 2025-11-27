@@ -21,28 +21,24 @@ import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PageHeader } from '@/components/layout/page-header';
 import { Separator } from '@/components/ui/separator';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
 import type { Category } from '@/lib/types';
+import { mockCategories } from '@/lib/categories';
+import { MobilePageHeader } from '@/components/layout/mobile-page-header';
 
 
 export default function CreateEventPage() {
     const { isAdmin, loading } = useAdmin();
     const router = useRouter();
     const { toast } = useToast();
-    const firestore = useFirestore();
 
     const [aiTopic, setAiTopic] = useState('');
     const [aiIdeas, setAiIdeas] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [selectedIdea, setSelectedIdea] = useState('');
 
-    const categoriesQuery = useMemo(() => {
-      if (!firestore) return null;
-      return query(collection(firestore, 'categories'));
-    }, [firestore]);
+    const [categories, setCategories] = useState<Category[]>(mockCategories);
+    const [categoriesLoading, setCategoriesLoading] = useState(false);
 
-    const { data: categories, loading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
     useEffect(() => {
       if (!loading && !isAdmin) {
@@ -87,10 +83,13 @@ export default function CreateEventPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      <PageHeader 
-          title="Create a New Betting Event"
-          description="Define a new event for users to place their bets on."
-      />
+      <MobilePageHeader title="Create Event" />
+      <div className="hidden md:block">
+        <PageHeader 
+            title="Create a New Betting Event"
+            description="Define a new event for users to place their bets on."
+        />
+      </div>
 
       <Card>
         <CardHeader>

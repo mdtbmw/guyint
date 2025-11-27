@@ -9,12 +9,12 @@ const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 /**
  * useAdmin hook - Client-side check for administrative privileges.
  * 
- * IMPORTANT: This hook is for UI rendering purposes ONLY (e.g., showing/hiding admin links).
- * It provides a quick client-side check but offers NO actual security.
+ * This hook checks if the currently connected wallet address matches the
+ * admin address defined in the environment variables. It is intended for
+ * UI rendering purposes ONLY (e.g., showing/hiding admin links).
  * 
- * True security is enforced by backend mechanisms, primarily Firebase Security Rules,
- * which verify the user's UID on every database request. Any user can manipulate
- * client-side code, so never rely on this hook to authorize a sensitive action.
+ * True security is enforced by the smart contract, which has an 'admin'
+ * role defined for sensitive functions.
  */
 export function useAdmin() {
   const { address, connected } = useWallet();
@@ -31,14 +31,13 @@ export function useAdmin() {
     }
 
     if (connected && address) {
-      // This is a simple string comparison for UI purposes.
-      // The real security check happens in firestore.rules using `request.auth.uid`.
-      setIsAdmin(address.toLowerCase() === ADMIN_ADDRESS.toLowerCase());
+      const isAddressMatch = address.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
+      setIsAdmin(isAddressMatch);
     } else {
       setIsAdmin(false);
     }
     setLoading(false);
   }, [address, connected]);
 
-  return { isAdmin, loading };
+  return { isAdmin, loading, adminAddress: ADMIN_ADDRESS };
 }

@@ -1,11 +1,10 @@
-
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import React from 'react';
-import { navLinks } from '@/lib/nav-links.tsx';
+import { navLinks } from '@/lib/nav-links';
 
 const mobileLinks = navLinks.filter(link => link.mobile);
 
@@ -23,16 +22,14 @@ export function BottomNav() {
                         href={link.href}
                         key={link.href}
                         className={cn(
-                            'relative flex items-center justify-center gap-2 rounded-full transition-all duration-300',
+                            'relative flex flex-col items-center justify-center gap-1 rounded-full transition-all duration-300 h-14 w-14',
                             isActive 
-                                ? 'bg-primary text-white h-10 px-4'
-                                : 'text-white/70 hover:text-white h-12 w-12'
+                                ? 'text-primary'
+                                : 'text-white/70 hover:text-white'
                         )}
                         >
-                        {React.cloneElement(link.icon as React.ReactElement, { className: 'h-5 w-5 flex-shrink-0' })}
-                        {isActive && (
-                             <span className="text-sm font-medium">{link.label}</span>
-                        )}
+                        {React.cloneElement(link.icon as React.ReactElement, { className: 'h-6 w-6 flex-shrink-0' })}
+                        <span className="text-[10px] font-medium">{link.label}</span>
                     </Link>
                 );
                 })}

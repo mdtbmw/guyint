@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, FC } from 'react';
@@ -10,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Plus, Edit, Trash2, AlertTriangle, ChevronsUpDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { addCategory, updateCategory, deleteCategory } from '@/services/categoryService';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,63 +93,14 @@ const IconPicker: FC<IconPickerProps> = ({ value, onSelect }) => {
 
 export function AdminCategoryManager({ categories, loading, error }: { categories: Category[] | null, loading: boolean, error: Error | null }) {
   const { toast } = useToast();
-  const [isAdding, setIsAdding] = useState(false);
-  const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryIcon, setNewCategoryIcon] = useState('');
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim() || !newCategoryIcon.trim()) {
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a name and select an icon.' });
-      return;
-    }
-    setIsAdding(true);
-    try {
-      await addCategory({ name: newCategoryName, icon: newCategoryIcon });
-      toast({ title: 'Success', description: 'New category added.' });
-      setNewCategoryName('');
-      setNewCategoryIcon('');
-    } catch (e: any) {
-      console.error(e);
-      toast({ variant: 'destructive', title: 'Error Adding Category', description: e.message || 'You do not have permission to perform this action.' });
-    } finally {
-      setIsAdding(false);
-    }
-  };
-
-  const handleUpdateCategory = async () => {
-    if (!editingCategory || !editingCategory.name.trim() || !editingCategory.icon.trim()) {
-       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a name and an icon.' });
-      return;
-    }
-     setIsProcessing(prev => ({...prev, [editingCategory.id as string]: true}));
-    try {
-      await updateCategory(editingCategory.id as string, { name: editingCategory.name, icon: editingCategory.icon });
-      toast({ title: 'Success', description: 'Category updated.' });
-      setEditingCategory(null);
-    } catch (e: any) {
-      console.error(e);
-      toast({ variant: 'destructive', title: 'Error Updating Category', description: e.message || 'You do not have permission to perform this action.' });
-    } finally {
-      if (editingCategory?.id) {
-        setIsProcessing(prev => ({...prev, [editingCategory.id as string]: false}));
-      }
-    }
-  };
-
-  const handleDeleteCategory = async (categoryId: string) => {
-    setIsProcessing(prev => ({...prev, [categoryId]: true}));
-    try {
-      await deleteCategory(categoryId);
-      toast({ title: 'Success', description: 'Category deleted.' });
-    } catch (e: any) {
-      console.error(e);
-      toast({ variant: 'destructive', title: 'Error Deleting Category', description: e.message || 'You do not have permission to perform this action.' });
-    } finally {
-       setIsProcessing(prev => ({...prev, [categoryId]: false}));
-    }
-  };
+  const [selectedIcon, setSelectedIcon] = useState('');
+  
+  const handleAction = () => {
+    toast({
+      title: "Action Not Available",
+      description: "Category management is an off-chain feature. This UI is a functional placeholder to demonstrate how such a system would be integrated.",
+    });
+  }
 
   if (error) {
     return (
@@ -159,12 +109,8 @@ export function AdminCategoryManager({ categories, loading, error }: { categorie
           <CardTitle className="text-destructive flex items-center gap-2"><AlertTriangle/> Error Loading Categories</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-destructive-foreground">Could not load categories from Firestore.</p>
+          <p className="text-destructive-foreground">Could not load categories.</p>
           <p className="text-xs text-muted-foreground mt-2">{error.message}</p>
-           <p className="text-sm text-muted-foreground mt-4">
-              This usually happens when client-side database reads are blocked by security rules.
-              Please ensure your `firestore.rules` are configured to allow reads on the `categories` collection.
-            </p>
         </CardContent>
       </Card>
     )
@@ -179,14 +125,14 @@ export function AdminCategoryManager({ categories, loading, error }: { categorie
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Input placeholder="New Category Name (e.g., Entertainment)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="flex-1"/>
+            <Input placeholder="New Category Name (e.g., Entertainment)" className="flex-1"/>
             <IconPicker
-              value={newCategoryIcon}
-              onSelect={setNewCategoryIcon}
+              value={selectedIcon}
+              onSelect={setSelectedIcon}
             />
-            <Button onClick={handleAddCategory} disabled={isAdding} className="w-full sm:w-auto">
-              {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-               <span className="sm:hidden ml-2">Add Category</span>
+            <Button onClick={handleAction} className="w-full sm:w-auto">
+               <Plus className="w-4 h-4 mr-2" />
+               Add
             </Button>
           </div>
         </CardContent>
@@ -195,7 +141,9 @@ export function AdminCategoryManager({ categories, loading, error }: { categorie
       <Card>
         <CardHeader>
           <CardTitle>Existing Categories</CardTitle>
-           <CardDescription>Manage the categories currently available on the platform.</CardDescription>
+           <CardDescription>
+            Category management is an off-chain activity. This UI is for demonstration purposes.
+           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -207,77 +155,31 @@ export function AdminCategoryManager({ categories, loading, error }: { categorie
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-5" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-9 w-24 ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : categories && categories.length > 0 ? (
-                categories.map(cat => (
-                editingCategory?.id === cat.id ? (
-                  <TableRow key={cat.id} className="bg-muted/50">
-                    <TableCell>
-                      <IconPicker
-                        value={editingCategory.icon}
-                        onSelect={(icon) => setEditingCategory({...editingCategory, icon})}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={editingCategory.name}
-                        onChange={(e) => setEditingCategory({...editingCategory, name: e.target.value})}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button size="sm" variant="ghost" onClick={() => { setEditingCategory(null); }} disabled={isProcessing[cat.id as string]}>Cancel</Button>
-                      <Button size="sm" onClick={handleUpdateCategory} disabled={isProcessing[cat.id as string]}>
-                         {isProcessing[cat.id as string] && <Loader2 className="w-4 h-4 mr-2 animate-spin"/>} Save
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                <TableRow key={cat.id}>
-                  <TableCell><DynamicIcon name={cat.icon}/></TableCell>
-                  <TableCell>{cat.name}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { setEditingCategory(cat); }} disabled={Object.values(isProcessing).some(Boolean)}>
-                      <Edit className="w-4 h-4" />
-                       <span className="sr-only">Edit</span>
-                    </Button>
-                     <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" className="h-8 w-8" disabled={Object.values(isProcessing).some(Boolean)}>
-                            {isProcessing[cat.id as string] ? <Loader2 className="w-4 h-4 animate-spin"/> : <Trash2 className="w-4 h-4" />}
-                             <span className="sr-only">Delete</span>
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-neutral-900 border-neutral-800">
-                          <AlertDialogHeader>
-                              <AlertDialogTitle className="text-white">Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription className="text-white/60">
-                                  This will permanently delete the "{cat.name}" category. This action cannot be undone.
-                              </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="border-t border-white/10 pt-4">
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteCategory(cat.id as string)}>Yes, Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-                )
-              ))
-            ) : (
-                <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                        No categories found. Add one to get started.
-                    </TableCell>
-                </TableRow>
-            )}
+                {loading ? (
+                    Array.from({length: 3}).map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell><Skeleton className="h-6 w-6" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                        </TableRow>
+                    ))
+                ) : categories && categories.length > 0 ? (
+                    categories.map(cat => (
+                        <TableRow key={cat.id}>
+                            <TableCell><DynamicIcon name={cat.icon} /></TableCell>
+                            <TableCell className="font-medium">{cat.name}</TableCell>
+                            <TableCell className="text-right">
+                                <Button size="sm" variant="ghost" onClick={handleAction}><Trash2 className="w-4 h-4" /></Button>
+                            </TableCell>
+                        </TableRow>
+                    ))
+                ): (
+                    <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                            No categories found.
+                        </TableCell>
+                    </TableRow>
+                )}
             </TableBody>
           </Table>
         </CardContent>

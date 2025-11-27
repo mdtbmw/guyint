@@ -2,14 +2,18 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Construction } from "lucide-react";
+import { MobilePageHeader } from "@/components/layout/mobile-page-header";
 
 export default function SettingsPage() {
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Settings"
-        description="Manage your account and application preferences."
-      />
+       <MobilePageHeader title="Settings" />
+      <div className="hidden md:block">
+        <PageHeader
+            title="Settings"
+            description="Manage your account and application preferences."
+        />
+      </div>
       <Card>
         <CardHeader>
             <CardTitle>Coming Soon</CardTitle>

@@ -2,47 +2,40 @@
 
 import { useWallet } from '@/hooks/use-wallet';
 import { WelcomeScreen } from '@/components/welcome-screen';
-import { BottomNav } from './bottom-nav';
-import { Sidebar } from './sidebar';
 import { AppHeader } from './app-header';
+import { Sidebar } from './sidebar';
+import { BottomNav } from './bottom-nav';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { useAdmin } from '@/hooks/use-admin';
-import { SidebarProvider } from '../ui/sidebar';
+import { SplashScreen } from '../splash-screen';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { connected } = useWallet();
+  const { connected, isConnecting } = useWallet();
   const pathname = usePathname();
-  const isDashboard = pathname === '/';
+
+  const isHomePage = pathname === '/';
+
+  if (isConnecting) {
+    return <SplashScreen />;
+  }
 
   if (!connected) {
     return <WelcomeScreen />;
   }
 
   return (
-    <SidebarProvider>
-      <div className="md:flex md:h-screen w-full">
+    <div className="md:grid md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr]">
         <Sidebar />
-        <div className="flex-1 flex flex-col md:h-screen overflow-hidden">
-          <header className={cn(
-            "sticky top-0 z-20 w-full bg-neutral-950/80 backdrop-blur-lg md:bg-transparent md:backdrop-blur-none",
-            isDashboard ? '' : 'md:bg-neutral-950/80 md:backdrop-blur-lg'
-          )}>
-             <div className={cn(
-               "px-4 py-3 md:py-4"
-             )}>
-              <AppHeader />
-            </div>
-          </header>
-          <main className={cn(
-            "flex-1 w-full px-4 md:px-8 overflow-y-auto no-scrollbar pb-24 md:pb-8",
-             isDashboard ? "pt-0 md:pt-4" : "pt-2 md:pt-4"
-            )}>
-            {children}
-          </main>
+
+        <div className="relative flex flex-col md:min-h-screen">
+            {isHomePage && <AppHeader />}
+            <main className="flex-1">
+                <div className="p-4 sm:p-6 pb-24 md:pb-6 h-full">
+                    {children}
+                </div>
+            </main>
         </div>
+
         <BottomNav />
-      </div>
-    </SidebarProvider>
+    </div>
   );
 }

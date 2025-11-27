@@ -23,17 +23,18 @@ import { useToast } from "@/hooks/use-toast";
 import type { Event, BetOutcome } from "@/lib/types";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useWallet } from "@/hooks/use-wallet";
 
 interface DialogProps {
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;
     event: Event;
+    onActionSuccess: () => void;
 }
 
-export function DeclareOutcomeDialog({ isOpen, setIsOpen, event }: DialogProps) {
+export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess }: DialogProps) {
     const { toast } = useToast();
-    const router = useRouter();
+    const { walletClient, address } = useWallet();
     const [isLoading, setIsLoading] = useState(false);
     const [outcome, setOutcome] = useState<BetOutcome | null>(null);
 
@@ -42,13 +43,17 @@ export function DeclareOutcomeDialog({ isOpen, setIsOpen, event }: DialogProps) 
             toast({ variant: 'destructive', title: 'Please select an outcome.'});
             return;
         }
+        if (!walletClient || !address) {
+            toast({ variant: 'destructive', title: 'Wallet not connected.'});
+            return;
+        }
         setIsLoading(true);
         try {
-            const txHash = await blockchainService.declareResult(BigInt(event.id), outcome === 'YES');
+            const txHash = await blockchainService.declareResult(walletClient, address, BigInt(event.id), outcome === 'YES');
             toast({ title: 'Transaction Submitted', description: `Waiting for confirmation... Tx: ${txHash.slice(0, 10)}...` });
             await blockchainService.waitForTransaction(txHash);
             toast({ title: 'Success!', description: `The outcome for "${event.question}" has been declared as ${outcome}.` });
-            router.refresh();
+            onActionSuccess();
             setIsOpen(false);
         } catch(e: any) {
             console.error(e);
@@ -90,19 +95,23 @@ export function DeclareOutcomeDialog({ isOpen, setIsOpen, event }: DialogProps) 
     )
 }
 
-export function CancelEventDialog({ isOpen, setIsOpen, event }: DialogProps) {
+export function CancelEventDialog({ isOpen, setIsOpen, event, onActionSuccess }: DialogProps) {
     const { toast } = useToast();
-    const router = useRouter();
+    const { walletClient, address } = useWallet();
     const [isLoading, setIsLoading] = useState(false);
 
     const handleCancel = async () => {
+         if (!walletClient || !address) {
+            toast({ variant: 'destructive', title: 'Wallet not connected.'});
+            return;
+        }
         setIsLoading(true);
         try {
-            const txHash = await blockchainService.cancelEvent(BigInt(event.id));
+            const txHash = await blockchainService.cancelEvent(walletClient, address, BigInt(event.id));
             toast({ title: 'Transaction Submitted', description: `Waiting for confirmation... Tx: ${txHash.slice(0, 10)}...` });
             await blockchainService.waitForTransaction(txHash);
             toast({ title: 'Success!', description: `The event "${event.question}" has been canceled. Users can now claim refunds.` });
-            router.refresh();
+            onActionSuccess();
             setIsOpen(false);
         } catch(e: any) {
             console.error(e);

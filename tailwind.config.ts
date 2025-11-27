@@ -8,9 +8,17 @@ export default {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Space Grotesk', 'sans-serif'],
+        inter: ['var(--font-inter)', 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',
@@ -46,11 +54,27 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        'background-dark': 'var(--background-dark)',
+        'card-dark': 'var(--card-dark)',
+        'component-dark': 'var(--component-dark)',
+        'component-light-dark': 'var(--component-light-dark)',
+        'surface-dark': 'var(--surface-dark)',
+        'yes': 'var(--yes)',
+        'no': 'var(--no)',
+        'success': 'var(--success)',
+        'warning': 'var(--warning)',
+        'error': 'var(--error)',
+        'text-light': 'var(--text-light)',
+        'text-dark': 'var(--text-dark)',
+        'accent-gold': 'hsl(var(--accent-gold))',
+        'accent-blue': 'hsl(var(--accent-blue))',
+        'border-custom': 'hsl(var(--border-custom))',
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 4px)',
-        sm: 'calc(var(--radius) - 8px)',
+        xl: "calc(var(--radius) + 4px)",
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
         'accordion-down': {
@@ -76,5 +100,5 @@ export default {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [require('tailwindcss-animate'), require('@tailwindcss/container-queries')],
 } satisfies Config;

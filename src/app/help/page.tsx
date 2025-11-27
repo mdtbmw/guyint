@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/accordion';
 import { LifeBuoy, Wallet, Layers, CheckCircle, Database, Zap, FileLock2, HelpCircle, Library, KeyRound, Building } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
+import { MobilePageHeader } from '@/components/layout/mobile-page-header';
 
 const faqs = [
     {
@@ -24,7 +25,7 @@ const faqs = [
     },
     {
         question: "What is the $TRUST token?",
-        answer: "The $TRUST token is the official mainnet utility token for the Intuition BETs platform. All staking, rewards, and transactions are handled using $TRUST, providing a seamless and integrated economic engine for the entire market."
+        answer: "The $TRUST token is the official utility token for the Intuition BETs platform. All staking, rewards, and transactions are handled using $TRUST, providing a seamless and integrated economic engine for the entire market."
     },
     {
         question: "Who pays for gas fees and Oracle costs?",
@@ -36,7 +37,7 @@ const faqs = [
     },
     {
         question: "Where does the event data come from?",
-        answer: "Our user interface is powered by a high-performance Firestore database, which is synchronized in real-time with our on-chain smart contracts. This hybrid approach ensures you get instant updates in the UI while all critical data remains secured and validated on the blockchain as the ultimate source of truth."
+        answer: "Our user interface is powered by a high-performance database, which is synchronized in real-time with our on-chain smart contracts. This hybrid approach ensures you get instant updates in the UI while all critical data remains secured and validated on the blockchain as the ultimate source of truth."
     },
     {
         question: "Where do my staked funds go?",
@@ -47,10 +48,13 @@ const faqs = [
 export default function HelpPage() {
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <PageHeader
-        title="Platform Manual & FAQ"
-        description="Your complete guide to mastering the Intuition BETs decentralized prediction market."
-      />
+      <MobilePageHeader title="Help" />
+      <div className="hidden md:block">
+        <PageHeader
+            title="Platform Manual & FAQ"
+            description="Your complete guide to mastering the Intuition BETs decentralized prediction market."
+        />
+      </div>
 
       <Card>
         <CardHeader>
@@ -58,7 +62,7 @@ export default function HelpPage() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Intuition BETs is a premier, fully-decentralized prediction market deployed on the mainnet. It empowers users to capitalize on their real-world knowledge and foresight by betting on event outcomes with the official **$TRUST token**. Built on a foundation of immutable smart contracts and a secure backend, every bet, outcome, and payout is executed with maximum transparency, security, and efficiency.
+            Intuition BETs is a premier, fully-decentralized prediction market that empowers users to capitalize on their real-world knowledge and foresight by betting on event outcomes with the official **$TRUST token**. Built on a foundation of immutable smart contracts and a secure backend, every bet, outcome, and payout is executed with maximum transparency, security, and efficiency.
           </p>
         </CardContent>
       </Card>

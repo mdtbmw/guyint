@@ -24,7 +24,7 @@ Given the following topic, generate 5 potential event questions.
 The questions should be unambiguous and have a clear, verifiable outcome.
 The questions should be phrased as a "Will..." or "Is..." question.
 
-Topic: {{{input}}}
+Topic: {{{this}}}
 `,
 });
 
