@@ -74,7 +74,8 @@ class IntuitionService {
     const totalPool = Number(formatEther(eventData.yesPool)) + Number(formatEther(eventData.noPool));
     
     let status: EventStatus;
-    switch(eventData.status) {
+    const statusNumber = Number(eventData.status);
+    switch(statusNumber) {
         case 0: status = 'open'; break;
         case 1: status = 'closed'; break;
         case 2: status = 'finished'; break;
@@ -82,8 +83,8 @@ class IntuitionService {
         default: status = 'open';
     }
     
-    const bettingStopDate = eventData.bettingStopDate > 0 ? new Date(Number(eventData.bettingStopDate) * 1000) : null;
-    const resolutionDate = eventData.resolutionDate > 0 ? new Date(Number(eventData.resolutionDate) * 1000) : null;
+    const bettingStopDate = eventData.bettingStopDate > 0n ? new Date(Number(eventData.bettingStopDate) * 1000) : null;
+    const resolutionDate = eventData.resolutionDate > 0n ? new Date(Number(eventData.resolutionDate) * 1000) : null;
     
     // If betting has ended but not resolved, status should be 'closed'
     if (status === 'open' && bettingStopDate && bettingStopDate < new Date()) {
@@ -92,8 +93,9 @@ class IntuitionService {
 
 
     let winningOutcome: BetOutcome | undefined = undefined;
-    if(eventData.winningOutcome === 1) winningOutcome = 'YES';
-    else if (eventData.winningOutcome === 2) winningOutcome = 'NO';
+    const winningOutcomeNumber = Number(eventData.winningOutcome);
+    if(winningOutcomeNumber === 1) winningOutcome = 'YES';
+    else if (winningOutcomeNumber === 2) winningOutcome = 'NO';
     
     const { description, imageUrl: parsedImageUrl } = this.parseDescriptionAndImage(eventData.description || '');
     

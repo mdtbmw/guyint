@@ -75,7 +75,7 @@ export default function AdminPage() {
   const [automationInterval, setAutomationInterval] = useState(5);
   const [selectedCategories, setSelectedCategories] = useState<Record<string, boolean>>({});
   
-  const [uniqueParticipants, setUniqueParticipants] = useState(0);
+  const [uniqueParticipants, setUniqueParticipants] = useState<Set<Hex>>(new Set());
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
 
   const activeTab = searchParams.get('tab') || 'events';
@@ -158,7 +158,7 @@ export default function AdminPage() {
           bettors.add(log.user);
         }
       });
-      setUniqueParticipants(bettors.size);
+      setUniqueParticipants(bettors);
       
       await fetchCategories();
       await fetchLeaderboard();
@@ -287,7 +287,7 @@ export default function AdminPage() {
       totalEvents: events.length,
       totalValueLocked: totalValue,
       openEvents: events.filter(e => e.status === 'open').length,
-      users: uniqueParticipants,
+      users: uniqueParticipants.size,
     }
   }, [events, uniqueParticipants]);
   

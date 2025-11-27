@@ -66,7 +66,7 @@ export const useCountdown = (endDate: Date | null) => {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [endDate?.getTime()]);
+    }, [endDate]);
 
     const hasEnded = useMemo(() => {
         if (!endDate) return true; // If there's no date, consider it ended.
