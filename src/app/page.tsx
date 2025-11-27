@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -95,12 +94,7 @@ function Dashboard() {
 }
 
 export default function Page() {
-  const { isLoading: authLoading } = useAuthGuard();
   const { connected } = useWallet();
-
-  if (authLoading) {
-    return <DashboardLoading />;
-  }
 
   if (!connected) {
     return <LandingPage />;

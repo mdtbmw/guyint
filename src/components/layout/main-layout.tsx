@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Sidebar } from './sidebar';
@@ -32,9 +31,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   if (!connected) {
     return (
-      <div className="font-inter flex-1 overflow-y-auto">
-        <AppHeader />
-        <main className="overflow-y-auto no-scrollbar">
+      <div className="font-inter flex-1 h-dvh overflow-y-auto">
+        <main className="overflow-y-auto no-scrollbar h-full">
             {children}
         </main>
       </div>

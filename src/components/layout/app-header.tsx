@@ -154,6 +154,16 @@ export function AppHeader() {
     </DialogTrigger>
   );
 
+  // Render a simplified header for unauthenticated users
+  if (!connected) {
+    return (
+        <header className="fixed top-6 right-6 z-50">
+            <button onClick={() => open()} className="bg-white hover:bg-gold-400 text-black px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wide transition-all transform hover:scale-105 shadow-lg shadow-white/10 hover:shadow-gold-400/40">Connect</button>
+        </header>
+    );
+  }
+
+
   if (isMobile === undefined && connected) {
     return <header className="md:hidden h-20" />;
   }
