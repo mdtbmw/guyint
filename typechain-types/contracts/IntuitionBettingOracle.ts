@@ -542,10 +542,6 @@ export interface IntuitionBettingOracle extends BaseContract {
     "view"
   >;
 
-  getFunction<T extends ContractMethod = ContractMethod>(
-    key: string | FunctionFragment
-  ): T;
-
   getFunction(
     nameOrSignature: "cancelEvent"
   ): TypedContractMethod<[id: BigNumberish], [void], "nonpayable">;
@@ -614,7 +610,7 @@ export interface IntuitionBettingOracle extends BaseContract {
     [id: BigNumberish],
     [IntuitionBettingOracle.EventDataStructOutput],
     "view"
-axg>;
+  >;
   getFunction(
     nameOrSignature: "getMultipleUserBets"
   ): TypedContractMethod<
@@ -628,7 +624,7 @@ axg>;
     [eventId: BigNumberish, user: AddressLike],
     [IntuitionBettingOracle.BetStructOutput],
     "view"
-axg>;
+  >;
   getFunction(
     nameOrSignature: "nextEventId"
   ): TypedContractMethod<[], [bigint], "view">;

@@ -2,127 +2,59 @@
 /* tslint:disable */
 /* eslint-disable */
 import type {
-  FunctionFragment,
-  Typed,
   EventFragment,
-  ContractTransaction,
+  FunctionFragment,
   ContractTransactionResponse,
-  DeferredTopicFilter,
-  EventLog,
-  TransactionRequest,
-  LogDescription,
+  BaseContract,
+  Result,
+  Interface,
 } from "ethers";
 
-export interface TypedDeferredTopicFilter<_TCEvent extends TypedContractEvent>
-  extends DeferredTopicFilter {}
-
-export interface TypedContractEvent<
-  InputTuple extends Array<any> = any,
-  OutputTuple extends Array<any> = any,
-  OutputObject = any
-> {
-  (...args: Partial<InputTuple>): TypedDeferredTopicFilter<
-    TypedContractEvent<InputTuple, OutputTuple, OutputObject>
-  >;
-  name: string;
-  fragment: EventFragment;
-  getFragment(...args: Partial<InputTuple>): EventFragment;
-}
-
-type __TypechainAOutputTuple<T> = T extends TypedContractEvent<
-  infer _U,
-  infer W
->
-  ? W
-  : never;
-type __TypechainOutputObject<T> = T extends TypedContractEvent<
-  infer _U,
-  infer _W,
-  infer V
->
-  ? V
-  : never;
-
-export interface TypedEventLog<TCEvent extends TypedContractEvent>
-  extends Omit<EventLog, "args"> {
-  args: __TypechainAOutputTuple<TCEvent> & __TypechainOutputObject<TCEvent>;
-}
-
-export interface TypedLogDescription<TCEvent extends TypedContractEvent>
-  extends Omit<LogDescription, "args"> {
-  args: __TypechainAOutputTuple<TCEvent> & __TypechainOutputObject<TCEvent>;
-}
-
-export type TypedListener<TCEvent extends TypedContractEvent> = (
-  ...listenerArg: [
-    ...__TypechainAOutputTuple<TCEvent>,
-    TypedEventLog<TCEvent>,
-    ...undefined[]
-  ]
-) => void;
-
-export type MinEthersFactory<C, ARGS> = {
-  deploy(...a: ARGS[]): Promise<C>;
+export type EventLog = {
+  topics: readonly string[];
+  data: string;
+  transactionHash: string;
+  blockHash: string;
+  blockNumber: number;
+  transactionIndex: number;
+  logIndex: number;
+  address: string;
 };
 
-export type GetContractTypeFromFactory<F> = F extends MinEthersFactory<
-  infer C,
-  any
->
-  ? C
-  : never;
-export type GetARGsTypeFromFactory<F> = F extends MinEthersFactory<any, any>
-  ? Parameters<F["deploy"]>
-  : never;
+export interface TypedEventLog<T extends TypedEvent> extends EventLog {
+  args: T["args"];
+}
 
-export type StateMutability = "nonpayable" | "payable" | "view";
+export type TypedListener<T extends TypedEvent> = (
+  ...listenerArg: [...T["args"], TypedEventLog<T>]
+) => void;
 
-export type BaseOverrides = Omit<TransactionRequest, "to" | "data">;
-export type NonPayableOverrides = Omit<
-  BaseOverrides,
-  "value" | "blockTag" | "enableCcipRead"
->;
-export type PayableOverrides = Omit<
-  BaseOverrides,
-  "blockTag" | "enableCcipRead"
->;
-export type ViewOverrides = Omit<TransactionRequest, "to" | "data">;
-export type Overrides<S extends StateMutability> = S extends "nonpayable"
-  ? NonPayableOverrides
-  : S extends "payable"
-  ? PayableOverrides
-  : ViewOverrides;
+export type TypedEvent<
+  TArgsArray extends any[] = any[],
+  TArgsObject = any
+> = {
+  readonly name: string;
+  readonly signature: string;
+  readonly args: TArgsArray & TArgsObject;
+};
 
-export type PostfixOverrides<A extends Array<any>, S extends StateMutability> =
-  | A
-  | [...A, Overrides<S>];
-export type ContractMethodArgs<
-  A extends Array<any>,
-  S extends StateMutability
-> = PostfixOverrides<{ [I in keyof A]-?: A[I] | Typed }, S>;
-
-export type DefaultReturnType<R> = R extends Array<any> ? R[0] : R;
-
-export interface TypedContractMethod<
-  A extends Array<any> = Array<any>,
-  R = any,
-  S extends StateMutability = "payable"
+export interface TypedContractEvent<
+  T extends TypedEvent,
+  TName extends string
 > {
-  (...args: ContractMethodArgs<A, S>): S extends "view"
-    ? Promise<DefaultReturnType<R>>
-    : Promise<ContractTransactionResponse>;
+  (...args: T["args"]): string;
+  name: TName;
+  fragment: EventFragment;
+  getFragment(...args: T["args"]): EventFragment;
+}
 
+export interface ContractMethod<
+  TInput extends any[],
+  TOutput,
+  TResult extends TOutput | ContractTransactionResponse
+> {
+  (...args: TInput): Promise<TResult>;
   name: string;
-
   fragment: FunctionFragment;
-
-  getFragment(...args: ContractMethodArgs<A, S>): FunctionFragment;
-
-  populateTransaction(
-    ...args: ContractMethodArgs<A, S>
-  ): Promise<ContractTransaction>;
-  staticCall(...args: ContractMethodArgs<A, S>): Promise<DefaultReturnType<R>>;
-  send(...args: ContractMethodArgs<A, S>): Promise<ContractTransactionResponse>;
-  estimateGas(...args: ContractMethodArgs<A, S>): Promise<bigint>;
-  staticCallResult(...args: ContractMethodArgs<A, S>): Promise<R>;
+  getFragment(...args: TInput): FunctionFragment;
 }
