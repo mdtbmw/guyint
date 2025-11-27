@@ -135,7 +135,7 @@ export function BettingHistory() {
                     const payout = (userStake * distributablePool) / winningPool;
                     pnl = Number(formatEther(payout)) - bet.stakedAmount;
                  } else {
-                     pnl = bet.stakedAmount; // Got their stake back
+                     pnl = 0; // If winning pool is 0, user gets stake back, so PnL is 0.
                  }
             } else if (bet.outcome === 'Refunded' || bet.outcome === 'Refundable') {
                 pnl = bet.stakedAmount;

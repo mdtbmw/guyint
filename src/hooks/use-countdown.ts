@@ -60,7 +60,7 @@ export const useCountdown = (endDate: Date | null) => {
         const timer = setInterval(() => {
             const newTimeLeft = calculateTimeLeft(endDate);
             setTimeLeft(newTimeLeft);
-             if (newTimeLeft && newTimeLeft.days === 0 && newTimeLeft.hours === 0 && newTimeLeft.minutes === 0 && newTimeLeft.seconds === 0) {
+             if (!newTimeLeft || (newTimeLeft.days === 0 && newTimeLeft.hours === 0 && newTimeLeft.minutes === 0 && newTimeLeft.seconds === 0)) {
                 clearInterval(timer);
             }
         }, 1000);
@@ -78,3 +78,4 @@ export const useCountdown = (endDate: Date | null) => {
 
     return { timeLeft, formattedTime, hasEnded };
 };
+
