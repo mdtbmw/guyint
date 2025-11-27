@@ -14,7 +14,7 @@ import {z} from 'zod';
 const ResolveEventInputSchema = z.string().describe("A yes/no question from a prediction market event that has concluded.");
 export type ResolveEventInput = z.infer<typeof ResolveEventInputSchema>;
 
-const ResolveEventOutputSchema = z.enum(["YES", "NO"]).describe("The definitive, real-world outcome of the event question.");
+export const ResolveEventOutputSchema = z.enum(["YES", "NO"]).describe("The definitive, real-world outcome of the event question.");
 export type ResolveEventOutput = z.infer<typeof ResolveEventOutputSchema>;
 
 export async function resolveEventOutcome(question: ResolveEventInput): Promise<ResolveEventOutput> {

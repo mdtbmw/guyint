@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
+import { DynamicIcon } from "@/lib/icons";
 
 interface AdminNavProps {
     activeTab: string;
@@ -30,9 +31,8 @@ const TABS = [
 export function AdminNav({ activeTab, onTabChange }: AdminNavProps) {
   const isMobile = useIsMobile();
 
-  const getIcon = (value: string) => {
-    const iconName = TABS.find(t => t.value === value)?.icon || 'HelpCircle';
-    const IconComponent = require('lucide-react')[iconName];
+  const getIcon = (iconName: string) => {
+    const IconComponent = (require('lucide-react') as any)[iconName] || require('lucide-react')['HelpCircle'];
     return <IconComponent className="w-4 h-4" />;
   }
 
@@ -57,7 +57,7 @@ export function AdminNav({ activeTab, onTabChange }: AdminNavProps) {
                         onSelect={() => onTabChange(tab.value)}
                         className="gap-2"
                     >
-                        {getIcon(tab.value)}
+                        {getIcon(tab.icon)}
                         {tab.label}
                     </DropdownMenuItem>
                 ))}
@@ -78,7 +78,7 @@ export function AdminNav({ activeTab, onTabChange }: AdminNavProps) {
                         "whitespace-nowrap"
                     )}
                 >
-                    {getIcon(tab.value)}
+                    {getIcon(tab.icon)}
                     {tab.label}
                 </TabsTrigger>
             ))}
