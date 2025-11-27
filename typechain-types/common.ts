@@ -103,7 +103,6 @@ export type ContractMethodArgs<
 
 export type DefaultReturnType<R> = R extends Array<any> ? R[0] : R;
 
-// export interface ContractMethod<A extends Array<any> = Array<any>, R = any, D extends R | ContractTransactionResponse = R | ContractTransactionResponse> {
 export interface TypedContractMethod<
   A extends Array<any> = Array<any>,
   R = any,

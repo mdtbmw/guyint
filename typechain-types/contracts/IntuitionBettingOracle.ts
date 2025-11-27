@@ -614,7 +614,7 @@ export interface IntuitionBettingOracle extends BaseContract {
     [id: BigNumberish],
     [IntuitionBettingOracle.EventDataStructOutput],
     "view"
-  >;
+axg>;
   getFunction(
     nameOrSignature: "getMultipleUserBets"
   ): TypedContractMethod<
@@ -628,7 +628,7 @@ export interface IntuitionBettingOracle extends BaseContract {
     [eventId: BigNumberish, user: AddressLike],
     [IntuitionBettingOracle.BetStructOutput],
     "view"
-  >;
+axg>;
   getFunction(
     nameOrSignature: "nextEventId"
   ): TypedContractMethod<[], [bigint], "view">;
