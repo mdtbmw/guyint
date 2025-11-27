@@ -8,13 +8,11 @@ import type {
   FunctionFragment,
   Result,
   Interface,
-  EventFragment,
   AddressLike,
   ContractRunner,
   ContractMethod,
 } from "ethers";
 import type {
-  Event,
   Listener,
   ContractEvent,
 } from "../common";
@@ -39,7 +37,7 @@ export interface IntuitionVaultInterface extends Interface {
       | "SweeperUpdated"
       | "Swept"
       | "Withdrawn"
-  ): EventFragment;
+  ): FunctionFragment;
 
   encodeFunctionData(
     functionFragment: "balances",
@@ -88,7 +86,7 @@ export namespace DepositedEvent {
     user: string;
     amount: bigint;
   }
-  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
+  export type Event = ContractEvent<InputTuple, OutputTuple, OutputObject>;
 }
 
 export namespace OwnershipTransferredEvent {
@@ -98,7 +96,7 @@ export namespace OwnershipTransferredEvent {
     previousOwner: string;
     newOwner: string;
   }
-  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
+  export type Event = ContractEvent<InputTuple, OutputTuple, OutputObject>;
 }
 
 export namespace SweeperUpdatedEvent {
@@ -108,7 +106,7 @@ export namespace SweeperUpdatedEvent {
     sweeper: string;
     allowed: boolean;
   }
-  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
+  export type Event = ContractEvent<InputTuple, OutputTuple, OutputObject>;
 }
 
 export namespace SweptEvent {
@@ -123,7 +121,7 @@ export namespace SweptEvent {
     to: string;
     amount: bigint;
   }
-  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
+  export type Event = ContractEvent<InputTuple, OutputTuple, OutputObject>;
 }
 
 export namespace WithdrawnEvent {
@@ -133,7 +131,7 @@ export namespace WithdrawnEvent {
     user: string;
     amount: bigint;
   }
-  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
+  export type Event = ContractEvent<InputTuple, OutputTuple, OutputObject>;
 }
 
 export interface IntuitionVault extends BaseContract {
@@ -207,38 +205,14 @@ export interface IntuitionVault extends BaseContract {
 
   withdraw: ContractMethod<[amount: BigNumberish], [void], "nonpayable">;
 
-  getFunction(
-    nameOrSignature: "balances"
-  ): ContractMethod<[arg0: AddressLike], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "deposit"
-  ): ContractMethod<[], [void], "payable">;
-  getFunction(
-    nameOrSignature: "isSweeper"
-  ): ContractMethod<[arg0: AddressLike], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "owner"
-  ): ContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "setSweeper"
-  ): ContractMethod<
-    [sweeper: AddressLike, allowed: boolean],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "sweepTo"
-  ): ContractMethod<
-    [to: AddressLike, amount: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "transferOwnership"
-  ): ContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "withdraw"
-  ): ContractMethod<[amount: BigNumberish], [void], "nonpayable">;
+  getFunction(nameOrSignature: "balances"): ContractMethod<[arg0: AddressLike], [bigint], "view">;
+  getFunction(nameOrSignature: "deposit"): ContractMethod<[], [void], "payable">;
+  getFunction(nameOrSignature: "isSweeper"): ContractMethod<[arg0: AddressLike], [boolean], "view">;
+  getFunction(nameOrSignature: "owner"): ContractMethod<[], [string], "view">;
+  getFunction(nameOrSignature: "setSweeper"): ContractMethod<[sweeper: AddressLike, allowed: boolean], [void], "nonpayable">;
+  getFunction(nameOrSignature: "sweepTo"): ContractMethod<[to: AddressLike, amount: BigNumberish], [void], "nonpayable">;
+  getFunction(nameOrSignature: "transferOwnership"): ContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
+  getFunction(nameOrSignature: "withdraw"): ContractMethod<[amount: BigNumberish], [void], "nonpayable">;
 
   getEvent(
     key: "Deposited"

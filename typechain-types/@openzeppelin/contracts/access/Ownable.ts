@@ -7,13 +7,11 @@ import type {
   FunctionFragment,
   Result,
   Interface,
-  EventFragment,
   AddressLike,
   ContractRunner,
   ContractMethod,
 } from "ethers";
 import type {
-  Event,
   Listener,
   ContractEvent,
 } from "../../../common";
@@ -23,7 +21,7 @@ export interface OwnableInterface extends Interface {
     nameOrSignature: "owner" | "renounceOwnership" | "transferOwnership"
   ): FunctionFragment;
 
-  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): FunctionFragment;
 
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
@@ -53,7 +51,7 @@ export namespace OwnershipTransferredEvent {
     previousOwner: string;
     newOwner: string;
   }
-  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
+  export type Event = ContractEvent<InputTuple, OutputTuple, OutputObject>;
 }
 
 export interface Ownable extends BaseContract {
@@ -66,12 +64,12 @@ export interface Ownable extends BaseContract {
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<EventLog<TCEvent>>>;
+  ): Promise<Array<any>>;
   queryFilter<TCEvent extends ContractEvent>(
     filter: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<EventLog<TCEvent>>>;
+  ): Promise<Array<any>>;
 
   on<TCEvent extends ContractEvent>(
     event: TCEvent,
@@ -99,11 +97,11 @@ export interface Ownable extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  owner: TypedContractMethod<[], [string], "view">;
+  owner: ContractMethod<[], [string], "view">;
 
-  renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
+  renounceOwnership: ContractMethod<[], [void], "nonpayable">;
 
-  transferOwnership: TypedContractMethod<
+  transferOwnership: ContractMethod<
     [newOwner: AddressLike],
     [void],
     "nonpayable"

@@ -7,22 +7,18 @@ import type {
   FunctionFragment,
   Result,
   Interface,
-  EventFragment,
   ContractRunner,
   ContractMethod,
   Listener,
 } from "ethers";
 import type {
-  TypedContractEvent,
-  TypedEventLog,
-  TypedListener,
   ContractEvent,
 } from "../../../common";
 
 export interface IERC5267Interface extends Interface {
   getFunction(nameOrSignature: "eip712Domain"): FunctionFragment;
 
-  getEvent(nameOrSignatureOrTopic: "EIP712DomainChanged"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "EIP712DomainChanged"): FunctionFragment;
 
   encodeFunctionData(
     functionFragment: "eip712Domain",
@@ -39,9 +35,7 @@ export namespace EIP712DomainChangedEvent {
   export type InputTuple = [];
   export type OutputTuple = [];
   export interface OutputObject {}
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Log = TypedEventLog<Event>;
+  export type Event = ContractEvent<InputTuple, OutputTuple, OutputObject>;
 }
 
 export interface IERC5267 extends BaseContract {
@@ -54,40 +48,40 @@ export interface IERC5267 extends BaseContract {
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<any>>;
   queryFilter<TCEvent extends ContractEvent>(
     filter: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<any>>;
 
   on<TCEvent extends ContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
   on<TCEvent extends ContractEvent>(
     filter: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
 
   once<TCEvent extends ContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
   once<TCEvent extends ContractEvent>(
     filter: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
 
   listeners<TCEvent extends ContractEvent>(
     event: TCEvent
-  ): Promise<Array<TypedListener<TCEvent>>>;
+  ): Promise<Array<Listener<TCEvent>>>;
   listeners(eventName?: string): Promise<Array<Listener>>;
   removeAllListeners<TCEvent extends ContractEvent>(
     event?: TCEvent
   ): Promise<this>;
 
-  eip712Domain: TypedContractMethod<
+  eip712Domain: ContractMethod<
     [],
     [
       [string, string, string, bigint, string, string, bigint[]] & {
@@ -109,7 +103,7 @@ export interface IERC5267 extends BaseContract {
 
   getFunction(
     nameOrSignature: "eip712Domain"
-  ): TypedContractMethod<
+  ): ContractMethod<
     [],
     [
       [string, string, string, bigint, string, string, bigint[]] & {
@@ -127,19 +121,19 @@ export interface IERC5267 extends BaseContract {
 
   getEvent(
     key: "EIP712DomainChanged"
-  ): TypedContractEvent<
+  ): ContractEvent<
     EIP712DomainChangedEvent.InputTuple,
     EIP712DomainChangedEvent.OutputTuple,
     EIP712DomainChangedEvent.OutputObject
   >;
 
   filters: {
-    "EIP712DomainChanged()": TypedContractEvent<
+    "EIP712DomainChanged()": ContractEvent<
       EIP712DomainChangedEvent.InputTuple,
       EIP712DomainChangedEvent.OutputTuple,
       EIP712DomainChangedEvent.OutputObject
     >;
-    EIP712DomainChanged: TypedContractEvent<
+    EIP712DomainChanged: ContractEvent<
       EIP712DomainChangedEvent.InputTuple,
       EIP712DomainChangedEvent.OutputTuple,
       EIP712DomainChangedEvent.OutputObject

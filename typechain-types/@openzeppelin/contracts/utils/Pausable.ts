@@ -7,23 +7,19 @@ import type {
   FunctionFragment,
   Result,
   Interface,
-  EventFragment,
   AddressLike,
   ContractRunner,
   ContractMethod,
-  Listener,
 } from "ethers";
 import type {
-  TypedContractEvent,
-  TypedEventLog,
-  TypedListener,
+  Listener,
   ContractEvent,
 } from "../../../common";
 
 export interface PausableInterface extends Interface {
   getFunction(nameOrSignature: "paused"): FunctionFragment;
 
-  getEvent(nameOrSignatureOrTopic: "Paused" | "Unpaused"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "Paused" | "Unpaused"): FunctionFragment;
 
   encodeFunctionData(functionFragment: "paused", values?: undefined): string;
 
@@ -36,9 +32,7 @@ export namespace PausedEvent {
   export interface OutputObject {
     account: string;
   }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Log = TypedEventLog<Event>;
+  export type Event = ContractEvent<InputTuple, OutputTuple, OutputObject>;
 }
 
 export namespace UnpausedEvent {
@@ -47,9 +41,7 @@ export namespace UnpausedEvent {
   export interface OutputObject {
     account: string;
   }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Log = TypedEventLog<Event>;
+  export type Event = ContractEvent<InputTuple, OutputTuple, OutputObject>;
 }
 
 export interface Pausable extends BaseContract {
@@ -62,40 +54,40 @@ export interface Pausable extends BaseContract {
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<any>>;
   queryFilter<TCEvent extends ContractEvent>(
-    filter: TCEvent.Filter,
+    filter: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<any>>;
 
   on<TCEvent extends ContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
   on<TCEvent extends ContractEvent>(
-    filter: TCEvent.Filter,
-    listener: TypedListener<TCEvent>
+    filter: TCEvent,
+    listener: Listener<TCEvent>
   ): Promise<this>;
 
   once<TCEvent extends ContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
   once<TCEvent extends ContractEvent>(
-    filter: TCEvent.Filter,
-    listener: TypedListener<TCEvent>
+    filter: TCEvent,
+    listener: Listener<TCEvent>
   ): Promise<this>;
 
   listeners<TCEvent extends ContractEvent>(
     event: TCEvent
-  ): Promise<Array<TypedListener<TCEvent>>>;
+  ): Promise<Array<Listener<TCEvent>>>;
   listeners(eventName?: string): Promise<Array<Listener>>;
   removeAllListeners<TCEvent extends ContractEvent>(
     event?: TCEvent
   ): Promise<this>;
 
-  paused: TypedContractMethod<[], [boolean], "view">;
+  paused: ContractMethod<[], [boolean], "view">;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
@@ -103,40 +95,44 @@ export interface Pausable extends BaseContract {
 
   getFunction(
     nameOrSignature: "paused"
-  ): TypedContractMethod<[], [boolean], "view">;
+  ): ContractMethod<[], [boolean], "view">;
 
   getEvent(
     key: "Paused"
-  ): TypedContractEvent<
+  ): ContractEvent<
     PausedEvent.InputTuple,
     PausedEvent.OutputTuple,
     PausedEvent.OutputObject
   >;
   getEvent(
     key: "Unpaused"
-  ): TypedContractEvent<
+  ): ContractEvent<
     UnpausedEvent.InputTuple,
     UnpausedEvent.OutputTuple,
     UnpausedEvent.OutputObject
   >;
 
   filters: {
-    "Paused(address)": TypedContractEvent<
+    "Paused(address)": ContractEvent<
       PausedEvent.InputTuple,
       PausedEvent.OutputTuple,
       PausedEvent.OutputObject
     >;
-    Paused: TypedContractEvent<
+    Paused: ContractEvent<
       PausedEvent.InputTuple,
       PausedEvent.OutputTuple,
       PausedEvent.OutputObject
     >;
 
-    "Unpaused(address)": TypedContractEvent<
+    "Unpaused(address)": ContractEvent<
       UnpausedEvent.InputTuple,
       UnpausedEvent.OutputTuple,
       UnpausedEvent.OutputObject
     >;
-    Unpaused: TypedContractEvent<
+    Unpaused: ContractEvent<
       UnpausedEvent.InputTuple,
       UnpausedEvent.OutputTuple,
+      UnpausedEvent.OutputObject
+    >;
+  };
+}
