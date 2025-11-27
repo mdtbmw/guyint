@@ -15,11 +15,9 @@ import type {
 } from "ethers";
 import type {
   TypedContractEvent,
-  TypedDeferredTopicFilter,
   TypedEventLog,
-  TypedLogDescription,
   TypedListener,
-  TypedContractMethod,
+  ContractEvent,
 } from "../../../common";
 
 export interface OwnableInterface extends Interface {
@@ -58,9 +56,8 @@ export namespace OwnershipTransferredEvent {
     newOwner: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export interface Ownable extends BaseContract {
@@ -69,40 +66,40 @@ export interface Ownable extends BaseContract {
 
   interface: OwnableInterface;
 
-  queryFilter<TCEvent extends TypedContractEvent>(
+  queryFilter<TCEvent extends ContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEventLog<TCEvent>>>;
-  queryFilter<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  queryFilter<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEventLog<TCEvent>>>;
 
-  on<TCEvent extends TypedContractEvent>(
+  on<TCEvent extends ContractEvent>(
     event: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
-  on<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  on<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
 
-  once<TCEvent extends TypedContractEvent>(
+  once<TCEvent extends ContractEvent>(
     event: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
-  once<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  once<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
 
-  listeners<TCEvent extends TypedContractEvent>(
+  listeners<TCEvent extends ContractEvent>(
     event: TCEvent
   ): Promise<Array<TypedListener<TCEvent>>>;
   listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(
+  removeAllListeners<TCEvent extends ContractEvent>(
     event?: TCEvent
   ): Promise<this>;
 
@@ -146,8 +143,4 @@ export interface Ownable extends BaseContract {
     >;
     OwnershipTransferred: TypedContractEvent<
       OwnershipTransferredEvent.InputTuple,
-      OwnershipTransferredEvent.OutputTuple,
-      OwnershipTransferredEvent.OutputObject
-    >;
-  };
-}
+      OwnershipTransferredEvent.

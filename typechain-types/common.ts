@@ -8,6 +8,9 @@ import type {
   BaseContract,
   Result,
   Interface,
+  ContractTransaction,
+  ContractEvent,
+  ContractMethod,
 } from "ethers";
 
 export type EventLog = {
@@ -40,21 +43,10 @@ export type TypedEvent<
 
 export interface TypedContractEvent<
   T extends TypedEvent,
-  TName extends string
+  TName extends string = string
 > {
   (...args: T["args"]): string;
   name: TName;
   fragment: EventFragment;
   getFragment(...args: T["args"]): EventFragment;
-}
-
-export interface ContractMethod<
-  TInput extends any[],
-  TOutput,
-  TResult extends TOutput | ContractTransactionResponse
-> {
-  (...args: TInput): Promise<TResult>;
-  name: string;
-  fragment: FunctionFragment;
-  getFragment(...args: TInput): FunctionFragment;
 }

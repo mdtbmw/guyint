@@ -16,11 +16,9 @@ import type {
 } from "ethers";
 import type {
   TypedContractEvent,
-  TypedDeferredTopicFilter,
   TypedEventLog,
-  TypedLogDescription,
   TypedListener,
-  TypedContractMethod,
+  ContractEvent,
 } from "../common";
 
 export declare namespace IntuitionBettingOracle {
@@ -268,9 +266,8 @@ export namespace BetPlacedEvent {
     amount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace EventCanceledEvent {
@@ -280,9 +277,8 @@ export namespace EventCanceledEvent {
     eventId: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace EventCreatedEvent {
@@ -320,9 +316,8 @@ export namespace EventCreatedEvent {
     maxStake: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace EventResolvedEvent {
@@ -336,9 +331,8 @@ export namespace EventResolvedEvent {
     winningOutcome: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace OwnershipTransferredEvent {
@@ -349,9 +343,8 @@ export namespace OwnershipTransferredEvent {
     newOwner: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace WinningsClaimedEvent {
@@ -367,9 +360,8 @@ export namespace WinningsClaimedEvent {
     amount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export interface IntuitionBettingOracle extends BaseContract {
@@ -378,40 +370,40 @@ export interface IntuitionBettingOracle extends BaseContract {
 
   interface: IntuitionBettingOracleInterface;
 
-  queryFilter<TCEvent extends TypedContractEvent>(
+  queryFilter<TCEvent extends ContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEventLog<TCEvent>>>;
-  queryFilter<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  queryFilter<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEventLog<TCEvent>>>;
 
-  on<TCEvent extends TypedContractEvent>(
+  on<TCEvent extends ContractEvent>(
     event: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
-  on<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  on<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
 
-  once<TCEvent extends TypedContractEvent>(
+  once<TCEvent extends ContractEvent>(
     event: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
-  once<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  once<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
 
-  listeners<TCEvent extends TypedContractEvent>(
+  listeners<TCEvent extends ContractEvent>(
     event: TCEvent
   ): Promise<Array<TypedListener<TCEvent>>>;
   listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(
+  removeAllListeners<TCEvent extends ContractEvent>(
     event?: TCEvent
   ): Promise<this>;
 
@@ -542,140 +534,25 @@ export interface IntuitionBettingOracle extends BaseContract {
     "view"
   >;
 
-  getFunction(
-    nameOrSignature: "cancelEvent"
-  ): TypedContractMethod<[id: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "claim"
-  ): TypedContractMethod<[id: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "createEvent"
-  ): TypedContractMethod<
-    [
-      q: string,
-      desc: string,
-      cat: string,
-      img: string,
-      bettingStop: BigNumberish,
-      resolution: BigNumberish,
-      minStake: BigNumberish,
-      maxStake: BigNumberish
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "events"
-  ): TypedContractMethod<
-    [arg0: BigNumberish],
-    [
-      [
-        bigint,
-        string,
-        string,
-        string,
-        string,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint
-      ] & {
-        id: bigint;
-        question: string;
-        description: string;
-        category: string;
-        imageUrl: string;
-        bettingStopDate: bigint;
-        resolutionDate: bigint;
-        minStake: bigint;
-        maxStake: bigint;
-        yesPool: bigint;
-        noPool: bigint;
-        status: bigint;
-        winningOutcome: bigint;
-      }
-    ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getAllEventIds"
-  ): TypedContractMethod<[], [bigint[]], "view">;
-  getFunction(
-    nameOrSignature: "getEvent"
-  ): TypedContractMethod<
-    [id: BigNumberish],
-    [IntuitionBettingOracle.EventDataStructOutput],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getMultipleUserBets"
-  ): TypedContractMethod<
-    [eventIds: BigNumberish[], user: AddressLike],
-    [IntuitionBettingOracle.BetStructOutput[]],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getUserBet"
-  ): TypedContractMethod<
-    [eventId: BigNumberish, user: AddressLike],
-    [IntuitionBettingOracle.BetStructOutput],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "nextEventId"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "owner"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "placeBet"
-  ): TypedContractMethod<
-    [id: BigNumberish, outcome: boolean],
-    [void],
-    "payable"
-  >;
-  getFunction(
-    nameOrSignature: "platformFeeBps"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "renounceOwnership"
-  ): TypedContractMethod<[], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "resolveEvent"
-  ): TypedContractMethod<
-    [id: BigNumberish, yesWins: boolean],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "setPlatformFee"
-  ): TypedContractMethod<[_newFeeBps: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "setTreasury"
-  ): TypedContractMethod<[_newTreasury: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "transferOwnership"
-  ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "treasury"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "userBets"
-  ): TypedContractMethod<
-    [arg0: BigNumberish, arg1: AddressLike],
-    [
-      [bigint, bigint, boolean] & {
-        yesAmount: bigint;
-        noAmount: bigint;
-        claimed: boolean;
-      }
-    ],
-    "view"
-  >;
+  getFunction(nameOrSignature: "cancelEvent"): TypedContractMethod<[id: BigNumberish], [void], "nonpayable">;
+  getFunction(nameOrSignature: "claim"): TypedContractMethod<[id: BigNumberish], [void], "nonpayable">;
+  getFunction(nameOrSignature: "createEvent"): TypedContractMethod<[q: string, desc: string, cat: string, img: string, bettingStop: BigNumberish, resolution: BigNumberish, minStake: BigNumberish, maxStake: BigNumberish], [void], "nonpayable">;
+  getFunction(nameOrSignature: "events"): TypedContractMethod<[arg0: BigNumberish], [bigint, string, string, string, string, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint], "view">;
+  getFunction(nameOrSignature: "getAllEventIds"): TypedContractMethod<[], [bigint[]], "view">;
+  getFunction(nameOrSignature: "getEvent"): TypedContractMethod<[id: BigNumberish], [IntuitionBettingOracle.EventDataStructOutput], "view">;
+  getFunction(nameOrSignature: "getMultipleUserBets"): TypedContractMethod<[eventIds: BigNumberish[], user: AddressLike], [IntuitionBettingOracle.BetStructOutput[]], "view">;
+  getFunction(nameOrSignature: "getUserBet"): TypedContractMethod<[eventId: BigNumberish, user: AddressLike], [IntuitionBettingOracle.BetStructOutput], "view">;
+  getFunction(nameOrSignature: "nextEventId"): TypedContractMethod<[], [bigint], "view">;
+  getFunction(nameOrSignature: "owner"): TypedContractMethod<[], [string], "view">;
+  getFunction(nameOrSignature: "placeBet"): TypedContractMethod<[id: BigNumberish, outcome: boolean], [void], "payable">;
+  getFunction(nameOrSignature: "platformFeeBps"): TypedContractMethod<[], [bigint], "view">;
+  getFunction(nameOrSignature: "renounceOwnership"): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(nameOrSignature: "resolveEvent"): TypedContractMethod<[id: BigNumberish, yesWins: boolean], [void], "nonpayable">;
+  getFunction(nameOrSignature: "setPlatformFee"): TypedContractMethod<[_newFeeBps: BigNumberish], [void], "nonpayable">;
+  getFunction(nameOrSignature: "setTreasury"): TypedContractMethod<[_newTreasury: AddressLike], [void], "nonpayable">;
+  getFunction(nameOrSignature: "transferOwnership"): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
+  getFunction(nameOrSignature: "treasury"): TypedContractMethod<[], [string], "view">;
+  getFunction(nameOrSignature: "userBets"): TypedContractMethod<[arg0: BigNumberish, arg1: AddressLike], [[bigint, bigint, boolean]], "view">;
 
   getEvent(
     key: "BetPlaced"
@@ -785,6 +662,3 @@ export interface IntuitionBettingOracle extends BaseContract {
       WinningsClaimedEvent.InputTuple,
       WinningsClaimedEvent.OutputTuple,
       WinningsClaimedEvent.OutputObject
-    >;
-  };
-}

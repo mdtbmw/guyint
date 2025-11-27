@@ -16,11 +16,9 @@ import type {
 } from "ethers";
 import type {
   TypedContractEvent,
-  TypedDeferredTopicFilter,
   TypedEventLog,
-  TypedLogDescription,
   TypedListener,
-  TypedContractMethod,
+  ContractEvent,
 } from "../common";
 
 export interface IntuitionVaultInterface extends Interface {
@@ -93,9 +91,8 @@ export namespace DepositedEvent {
     amount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace OwnershipTransferredEvent {
@@ -106,9 +103,8 @@ export namespace OwnershipTransferredEvent {
     newOwner: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace SweeperUpdatedEvent {
@@ -119,9 +115,8 @@ export namespace SweeperUpdatedEvent {
     allowed: boolean;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace SweptEvent {
@@ -137,9 +132,8 @@ export namespace SweptEvent {
     amount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace WithdrawnEvent {
@@ -150,9 +144,8 @@ export namespace WithdrawnEvent {
     amount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export interface IntuitionVault extends BaseContract {
@@ -161,40 +154,40 @@ export interface IntuitionVault extends BaseContract {
 
   interface: IntuitionVaultInterface;
 
-  queryFilter<TCEvent extends TypedContractEvent>(
+  queryFilter<TCEvent extends ContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEventLog<TCEvent>>>;
-  queryFilter<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  queryFilter<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEventLog<TCEvent>>>;
 
-  on<TCEvent extends TypedContractEvent>(
+  on<TCEvent extends ContractEvent>(
     event: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
-  on<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  on<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
 
-  once<TCEvent extends TypedContractEvent>(
+  once<TCEvent extends ContractEvent>(
     event: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
-  once<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  once<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
 
-  listeners<TCEvent extends TypedContractEvent>(
+  listeners<TCEvent extends ContractEvent>(
     event: TCEvent
   ): Promise<Array<TypedListener<TCEvent>>>;
   listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(
+  removeAllListeners<TCEvent extends ContractEvent>(
     event?: TCEvent
   ): Promise<this>;
 
@@ -225,10 +218,6 @@ export interface IntuitionVault extends BaseContract {
   >;
 
   withdraw: TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
-
-  getFunction<T extends ContractMethod = ContractMethod>(
-    key: string | FunctionFragment
-  ): T;
 
   getFunction(
     nameOrSignature: "balances"
@@ -352,7 +341,4 @@ export interface IntuitionVault extends BaseContract {
     Withdrawn: TypedContractEvent<
       WithdrawnEvent.InputTuple,
       WithdrawnEvent.OutputTuple,
-      WithdrawnEvent.OutputObject
-    >;
-  };
-}
+      WithdrawnEvent.

@@ -66,6 +66,4 @@ export class Pausable__factory {
     return new Interface(_abi) as PausableInterface;
   }
   static connect(address: string, runner?: ContractRunner | null): Pausable {
-    return new Contract(address, _abi, runner) as unknown as Pausable;
-  }
-}
+    return new Contract(address, _abi, runner)
