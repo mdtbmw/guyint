@@ -4,7 +4,7 @@
 
 import { createPublicClient, http, formatEther, parseEther, Hex, Address, Hash, WalletClient, PublicClient, getAddress, UserRejectedRequestError, TransactionReceipt, decodeEventLog } from 'viem';
 import type { Event, BetOutcome, EventStatus, NotificationType, PnLBet, Bet } from '@/lib/types';
-import { IntuitionBettingOracleAbi } from '@/lib/IntuitionBettingAbi';
+import { IntuitionBettingAbi } from '@/lib/IntuitionBettingAbi';
 import { activeChain } from '@/lib/chains';
 import placeholderData from '@/lib/placeholder-images.json';
 
@@ -199,23 +199,29 @@ class IntuitionService {
           })
         );
       
-      const onchainResults = await Promise.all(eventPromises);
+        const onchainResults = await Promise.all(eventPromises);
+        
+        // **CRITICAL FIX**: Filter out any null results *before* attempting to process the array.
+        const validResults = onchainResults.filter(res => res !== null);
 
-      const events = onchainResults
-        .map((res, index) => {
-          if (res) {
-            return this.normalizeOnChainEvent(res, eventIds[index]);
-          }
-          return null;
-        })
-        .filter((e): e is Event => e !== null && e.question !== '');
+        if (!validResults) {
+            throw new Error("Received invalid results from blockchain while fetching events.");
+        }
 
-      const sortedEvents = events.sort((a, b) => (b.bettingStopDate?.getTime() || 0) - (a.bettingStopDate?.getTime() || 0));
-      
-      eventsCache = sortedEvents;
-      lastCacheTime = now;
+        const events = validResults
+          .map((res, index) => {
+            // Note: `index` here is for `validResults`, we need original `eventIds` mapping
+            const originalId = eventIds[onchainResults.indexOf(res)];
+            return this.normalizeOnChainEvent(res, originalId);
+          })
+          .filter((e): e is Event => e !== null && e.question !== '');
 
-      return sortedEvents;
+        const sortedEvents = events.sort((a, b) => (b.bettingStopDate?.getTime() || 0) - (a.bettingStopDate?.getTime() || 0));
+        
+        eventsCache = sortedEvents;
+        lastCacheTime = now;
+
+        return sortedEvents;
 
     } catch (err: any) {
        console.error('Core `getAllEvents` call failed. This could be due to an RPC issue or invalid contract address.', err.message);
