@@ -3,17 +3,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import { Settings } from 'lucide-react';
 import React from 'react';
 import { Logo } from '../icons';
 import { useAdmin } from '@/hooks/use-admin';
 import { navLinks, type NavLink } from '@/lib/nav-links.tsx';
-import { Sidebar as SidebarPrimitive, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from '../ui/sidebar';
+import { 
+  Sidebar as SidebarPrimitive, 
+  SidebarContent, 
+  SidebarHeader, 
+  SidebarMenu, 
+  SidebarMenuItem, 
+  SidebarMenuButton, 
+  SidebarFooter,
+  useSidebar
+} from '../ui/sidebar';
 
 export function Sidebar() {
   const pathname = usePathname();
   const { isAdmin } = useAdmin();
+  const { setOpenMobile } = useSidebar();
 
   const getVisibleLinks = (group: NavLink['group']) => {
     return navLinks.filter(l => {
@@ -33,20 +42,16 @@ export function Sidebar() {
     const isActive = pathname === link.href;
     return (
       <SidebarMenuItem key={link.href}>
-        <SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
-          <Link href={link.href}>
-            {React.cloneElement(link.icon as React.ReactElement, {})}
-            <span>{link.label}</span>
-          </Link>
-        </SidebarMenuButton>
+        <Link href={link.href} passHref legacyBehavior>
+           <SidebarMenuButton as="a" isActive={isActive} tooltip={link.label} onClick={() => setOpenMobile(false)}>
+              {React.cloneElement(link.icon as React.ReactElement, {})}
+              <span>{link.label}</span>
+            </SidebarMenuButton>
+        </Link>
       </SidebarMenuItem>
     );
   };
   
-  const mobileLinks = navLinks.filter(l => l.mobile || (isAdmin && l.group === 'admin'));
-  const desktopMainLinks = navLinks.filter(l => !l.mobile && (!isAdmin || (isAdmin && l.group !=='admin')));
-
-
   return (
     <SidebarPrimitive>
       <SidebarContent>
@@ -59,9 +64,9 @@ export function Sidebar() {
             </div>
         </SidebarHeader>
 
-        <SidebarMenu>
+        <SidebarMenu className="flex-1 overflow-y-auto">
           {!isAdmin && mainLinks.length > 0 && (
-            <div>
+            <div className="mb-4">
               <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 px-3">Menu</h2>
               <div className="space-y-1">
                 {mainLinks.map(renderLink)}
@@ -71,14 +76,14 @@ export function Sidebar() {
 
           {isAdmin && (
             <>
-              <div>
+              <div className="mb-4">
                 <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 px-3">Menu</h2>
                 <div className="space-y-1">
                   {renderLink(navLinks.find(l => l.href === '/')!)}
                   {renderLink(navLinks.find(l => l.href === '/search')!)}
                 </div>
               </div>
-              <div>
+              <div className="mb-4">
                 <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 px-3">Admin</h2>
                 <div className="space-y-1">
                   {adminLinks.map(renderLink)}
@@ -100,12 +105,12 @@ export function Sidebar() {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/settings'} tooltip="Settings">
-                <Link href="/settings">
-                  <Settings />
-                  <span>Settings</span>
+                <Link href="/settings" passHref legacyBehavior>
+                    <SidebarMenuButton as="a" isActive={pathname === '/settings'} tooltip="Settings" onClick={() => setOpenMobile(false)}>
+                        <Settings />
+                        <span>Settings</span>
+                    </SidebarMenuButton>
                 </Link>
-              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
