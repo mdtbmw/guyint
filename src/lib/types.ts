@@ -1,10 +1,19 @@
 
-import type { Hex, Chain } from "viem";
+import { Timestamp } from "firebase/firestore";
 
 export type UserTier = "Rookie" | "Analyst" | "Intuitive" | "Oracle";
 
+export type User = {
+  walletAddress: string;
+  username: string;
+  avatar: string;
+  bio: string;
+  intuitionScore: number;
+  tier: UserTier;
+};
+
 export type Category = {
-  id: string;
+  id?: string;
   name: string;
   icon: string; // Lucide icon name
 }
@@ -15,19 +24,15 @@ export type BetOutcome = "YES" | "NO";
 export type Event = {
   id: string;
   question: string;
-  description?: string; // Optional description for more context
   category: string;
-  imageUrl?: string; // Optional image URL
   status: EventStatus;
   outcomes: {
     yes: number;
     no: number;
   };
   totalPool: number;
-  participants: Hex[];
-  startDate: Date | null;
-  bettingStopDate: Date | null;
-  resolutionDate: Date | null;
+  participants: number;
+  endDate: Date | Timestamp;
   winningOutcome?: BetOutcome;
   minStake: number;
   maxStake: number;
@@ -44,13 +49,8 @@ export type Bet = {
   winnings?: number;
 };
 
-export type PnLBet = Bet & {
-  pnl: number;
-};
-
-
 export type AdminRole = "Super Admin" | "Event Creator" | "Oracle";
-export type AdminAction = "Created Signal" | "Canceled Signal" | "Declared Outcome";
+export type AdminAction = "Created Event" | "Canceled Event" | "Declared Outcome";
 
 export type AdminLog = {
   id: string;
@@ -72,39 +72,23 @@ export type LeaderboardUser = {
   value: number;
 }
 
+export type Leaderboard = {
+  accuracy: LeaderboardUser[];
+  earnings: LeaderboardUser[];
+  activity: LeaderboardUser[];
+}
+
 export type Achievement = {
   id: string;
   name: string;
-  description: string;
   icon: string;
-  image: string;
-  criteria: (stats: UserStats) => boolean;
-  progress: (stats: UserStats) => number;
-  goal: (stats: UserStats | null) => number;
 }
 
-export type NotificationVariant = "default" | "success" | "destructive";
-export type NotificationCategory = 'onBetPlaced' | 'onEventResolved' | 'onWinningsClaimed';
-
-export type NotificationType = {
+export type Notification = {
   id: string;
   title: string;
   description: string;
   timestamp: Date;
-  icon: string; // Lucide icon name
+  icon: React.ReactNode;
   read: boolean;
-  href?: string;
-  variant?: NotificationVariant;
-  type: NotificationCategory | 'general';
 };
-
-export interface UserStats {
-    wins: number;
-    losses: number;
-    totalBets: number;
-    accuracy: number;
-    trustScore: number;
-}
-
-// Re-exporting Chain type for use in other parts of the application
-export type { Chain };

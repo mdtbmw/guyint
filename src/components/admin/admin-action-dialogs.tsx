@@ -23,65 +23,36 @@ import { useToast } from "@/hooks/use-toast";
 import type { Event, BetOutcome } from "@/lib/types";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useWallet } from "@/hooks/use-wallet";
-import { useNotifications } from '@/lib/state/notifications';
-import { WalletClient, Address } from "viem";
+import { useRouter } from "next/navigation";
 
 interface DialogProps {
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;
     event: Event;
-    onActionSuccess: () => void;
 }
 
-interface DeclareDialogProps extends DialogProps {
-    walletClient: WalletClient | null | undefined;
-    address: Address | undefined;
-}
-
-
-export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess, walletClient, address }: DeclareDialogProps) {
+export function DeclareOutcomeDialog({ isOpen, setIsOpen, event }: DialogProps) {
     const { toast } = useToast();
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [outcome, setOutcome] = useState<BetOutcome | null>(null);
-    const { addNotification } = useNotifications();
 
     const handleDeclare = async () => {
         if (!outcome) {
             toast({ variant: 'destructive', title: 'Please select an outcome.'});
             return;
         }
-        if (!walletClient || !address) {
-            toast({ variant: 'destructive', title: 'Wallet not connected.'});
-            return;
-        }
         setIsLoading(true);
         try {
-            const txHash = await blockchainService.resolveEvent(walletClient, address, BigInt(event.id), outcome === 'YES');
-            addNotification({
-                title: "Transaction Submitted",
-                description: `Declaring outcome... Tx: ${txHash.slice(0, 10)}...`,
-                icon: 'Loader2',
-                type: 'onEventResolved'
-            });
+            const txHash = await blockchainService.declareResult(BigInt(event.id), outcome === 'YES');
+            toast({ title: 'Transaction Submitted', description: `Waiting for confirmation... Tx: ${txHash.slice(0, 10)}...` });
             await blockchainService.waitForTransaction(txHash);
-            addNotification({
-                title: 'Outcome Declared!',
-                description: `Event "${event.question.slice(0, 20)}..." has been resolved.`,
-                icon: 'CheckCircle',
-                type: 'onEventResolved'
-            });
-            onActionSuccess();
+            toast({ title: 'Success!', description: `The outcome for "${event.question}" has been declared as ${outcome}.` });
+            router.refresh();
             setIsOpen(false);
         } catch(e: any) {
             console.error(e);
-            addNotification({
-                variant: 'destructive',
-                title: 'Failed to Declare Outcome',
-                description: e.message || 'An unexpected error occurred.',
-                icon: 'AlertTriangle',
-                type: 'general'
-            });
+            toast({ variant: 'destructive', title: 'Failed to Declare Outcome', description: e.shortMessage || 'An unexpected error occurred.' });
         } finally {
             setIsLoading(false);
         }
@@ -89,15 +60,15 @@ export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess
 
     return (
         <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogContent>
+            <AlertDialogContent className="bg-neutral-900 border-neutral-800">
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Declare Winning Outcome</AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogTitle className="text-white">Declare Winning Outcome</AlertDialogTitle>
+                    <AlertDialogDescription className="text-white/60">
                         Select the final, verified outcome for the event: "{event.question}". This action is irreversible and will allow winners to claim their funds.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="my-4">
-                     <Select onValueChange={(value: BetOutcome) => setOutcome(value)} disabled={event.status !== 'open' && event.status !== 'closed'}>
+                     <Select onValueChange={(value: BetOutcome) => setOutcome(value)}>
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select the winning outcome..." />
                         </SelectTrigger>
@@ -107,9 +78,9 @@ export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess
                         </SelectContent>
                     </Select>
                 </div>
-                <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeclare} disabled={isLoading || !outcome || (event.status !== 'open' && event.status !== 'closed')}>
+                <AlertDialogFooter className="border-t border-white/10 pt-4">
+                    <AlertDialogCancel className="bg-transparent text-white/80 border-white/20 hover:bg-white/10 hover:text-white" disabled={isLoading}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction className="bg-emerald-600 text-white hover:bg-emerald-500" onClick={handleDeclare} disabled={isLoading || !outcome}>
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {isLoading ? 'Submitting...' : 'Declare Outcome'}
                     </AlertDialogAction>
@@ -119,46 +90,23 @@ export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess
     )
 }
 
-export function CancelEventDialog({ isOpen, setIsOpen, event, onActionSuccess }: DialogProps) {
+export function CancelEventDialog({ isOpen, setIsOpen, event }: DialogProps) {
     const { toast } = useToast();
-    const { walletClient, address } = useWallet();
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
-    const { addNotification } = useNotifications();
-
 
     const handleCancel = async () => {
-         if (!walletClient || !address) {
-            toast({ variant: 'destructive', title: 'Wallet not connected.'});
-            return;
-        }
         setIsLoading(true);
         try {
-            const txHash = await blockchainService.cancelEvent(walletClient, address, BigInt(event.id));
-             addNotification({
-                title: "Transaction Submitted",
-                description: `Canceling event... Tx: ${txHash.slice(0, 10)}...`,
-                icon: 'Loader2',
-                type: 'general'
-            });
+            const txHash = await blockchainService.cancelEvent(BigInt(event.id));
+            toast({ title: 'Transaction Submitted', description: `Waiting for confirmation... Tx: ${txHash.slice(0, 10)}...` });
             await blockchainService.waitForTransaction(txHash);
-            addNotification({
-                title: 'Event Canceled',
-                description: `Event "${event.question.slice(0, 20)}..." has been canceled. All stakes have been refunded.`,
-                icon: 'Ban',
-                variant: 'destructive',
-                type: 'general'
-            });
-            onActionSuccess();
+            toast({ title: 'Success!', description: `The event "${event.question}" has been canceled. Users can now claim refunds.` });
+            router.refresh();
             setIsOpen(false);
         } catch(e: any) {
             console.error(e);
-             addNotification({
-                variant: 'destructive',
-                title: 'Failed to Cancel Event',
-                description: e.message || 'An unexpected error occurred.',
-                icon: 'AlertTriangle',
-                type: 'general'
-            });
+            toast({ variant: 'destructive', title: 'Failed to Cancel Event', description: e.shortMessage || 'An unexpected error occurred.' });
         } finally {
             setIsLoading(false);
         }
@@ -166,18 +114,18 @@ export function CancelEventDialog({ isOpen, setIsOpen, event, onActionSuccess }:
     
     return (
         <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogContent>
+            <AlertDialogContent className="bg-neutral-900 border-neutral-800">
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Delete and Refund Event?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        You are about to delete the event: "{event.question}". This will permanently cancel the event and allow all participants to claim a full refund of their stake. This action is irreversible.
+                    <AlertDialogTitle className="text-white">Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-white/60">
+                        You are about to cancel the event: "{event.question}". This will change its status to "Canceled" and allow all participants to claim a full refund of their stake. This action is irreversible.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isLoading}>Back</AlertDialogCancel>
-                    <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleCancel} disabled={isLoading}>
+                <AlertDialogFooter className="border-t border-white/10 pt-4">
+                    <AlertDialogCancel className="bg-transparent text-white/80 border-white/20 hover:bg-white/10 hover:text-white" disabled={isLoading}>Back</AlertDialogCancel>
+                    <AlertDialogAction className="bg-rose-600 text-white hover:bg-rose-500" onClick={handleCancel} disabled={isLoading}>
                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isLoading ? 'Canceling...' : 'Yes, Delete & Refund'}
+                        {isLoading ? 'Canceling...' : 'Yes, Cancel Event'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

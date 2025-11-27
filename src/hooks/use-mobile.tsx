@@ -1,8 +1,8 @@
 
 import * as React from "react"
 
-// Corresponds to Tailwind's 'md' breakpoint for switching from mobile to desktop nav
-const MOBILE_BREAKPOINT = 768
+// Corresponds to Tailwind's 'sm' breakpoint
+const MOBILE_BREAKPOINT = 640
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)

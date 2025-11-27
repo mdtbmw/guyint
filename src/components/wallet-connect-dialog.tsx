@@ -12,13 +12,10 @@ import { Button } from './ui/button';
 import { useWallet } from '@/hooks/use-wallet';
 
 export function WalletConnectDialog() {
-  // This component is now effectively a placeholder,
-  // as Web3Modal handles its own UI for wallet selection and unsupported environments.
-  // We keep it in case we need a custom "Install Wallet" prompt in the future,
-  // but it is no longer actively used by the useWallet hook.
-  
+  const { isConnectDialogOpen, setConnectDialogOpen } = useWallet();
+
   return (
-    <Dialog open={false}>
+    <Dialog open={isConnectDialogOpen} onOpenChange={setConnectDialogOpen}>
       <DialogContent className="bg-neutral-900/80 border-neutral-700 text-white w-[85%] max-w-sm rounded-2xl backdrop-blur-lg">
         <DialogHeader>
           <DialogTitle>Web3 Wallet Required</DialogTitle>

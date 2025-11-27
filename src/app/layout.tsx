@@ -1,30 +1,18 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { cn } from '@/lib/utils';
-import { Inter, Space_Grotesk as SpaceGrotesk, JetBrains_Mono as JetBrainsMono } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import MainLayout from '@/components/layout/main-layout';
-import Head from 'next/head';
-import { Web3Provider } from '@/components/web3-provider';
-import { Provider as JotaiProvider } from 'jotai';
-import { NotificationsProvider } from '@/lib/state/notifications';
-import { SettingsProvider } from '@/lib/state/settings';
-import { HeaderStateProvider } from '@/lib/state/header';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const spaceGrotesk = SpaceGrotesk({ subsets: ['latin'], variable: '--font-space-grotesk' });
-const jetbrainsMono = JetBrainsMono({ subsets: ['latin'], variable: '--font-jetbrains-mono' });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Intuition BETs — The Signal in the Noise',
-  description: 'A premium prediction arena. High stakes, pure signal, verified outcomes.',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+  title: 'Intuition BETs',
+  description: 'A decentralized betting platform for your intuition.',
 };
 
 export default function RootLayout({
@@ -33,36 +21,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <Head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-      </Head>
-      <body className={cn("h-dvh overflow-hidden bg-background font-sans", inter.variable, spaceGrotesk.variable, jetbrainsMono.variable)} suppressHydrationWarning>
-        <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.04] bg-noise"></div>
-        
-        <JotaiProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-            disableTransitionOnChange
-          >
-            <Web3Provider>
-              <SettingsProvider>
-                <NotificationsProvider>
-                  <HeaderStateProvider>
-                    <MainLayout>
-                      {children}
-                    </MainLayout>
-                  </HeaderStateProvider>
-                </NotificationsProvider>
-              </SettingsProvider>
-            </Web3Provider>
-            <Toaster />
-          </ThemeProvider>
-        </JotaiProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={cn("min-h-screen bg-neutral-950 text-white antialiased selection:bg-indigo-500/30 selection:text-indigo-100", inter.className)} suppressHydrationWarning>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <FirebaseClientProvider>
+             <div className="relative min-h-screen flex flex-col">
+                  {/* Ambient background */}
+                  <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+                    <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-fuchsia-500/15 blur-3xl"></div>
+                    <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl"></div>
+                    <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-3xl"></div>
+                  </div>
+              <MainLayout>{children}</MainLayout>
+            </div>
+          </FirebaseClientProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

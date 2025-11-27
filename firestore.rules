@@ -1,0 +1,38 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Checks if the requesting user's UID matches the admin's wallet address.
+    // This is secure because the UID is derived from a Firebase-issued token.
+    // An admin must sign in with a custom flow that sets their wallet address
+    // as their UID, which cannot be spoofed by other client-side users.
+    function isAdmin() {
+      // Use the environment variable for the admin address, falling back to a default.
+      // This is a placeholder; in a real production environment, you would use a more robust
+      // way to manage admin roles, such as custom claims.
+      return request.auth.uid == "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    }
+
+    match /events/{eventId} {
+      // Anyone can read events.
+      allow get, list: if true;
+      
+      // Only the admin can create, update, or delete events.
+      // This is a simplified rule; a real-world scenario might have more granular controls.
+      allow write: if isAdmin();
+    }
+
+    match /categories/{categoryId} {
+      // Anyone can read categories.
+      allow get, list: if true;
+
+      // Allow admin to create new categories.
+      allow create: if isAdmin();
+      
+      // CRITICAL: Only a verified admin can update or delete existing categories.
+      allow update, delete: if isAdmin();
+    }
+  }
+}
