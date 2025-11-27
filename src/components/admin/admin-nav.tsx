@@ -19,26 +19,21 @@ interface AdminNavProps {
 }
 
 const TABS = [
-  { value: "events", label: "Signal Management" },
-  { value: "ai_oracle", label: "AI Oracle" },
-  { value: "scout", label: "AI Scout" },
-  { value: "automation", label: "Automation" },
-  { value: "categories", label: "Categories" },
-  { value: "data", label: "User Data" },
+  { value: "events", label: "Signal Management", icon: "LayoutGrid" },
+  { value: "ai_oracle", label: "AI Oracle", icon: "Cpu" },
+  { value: "scout", label: "AI Scout", icon: "Sparkles" },
+  { value: "automation", label: "Automation", icon: "Bot" },
+  { value: "categories", label: "Categories", icon: "LayoutGrid" },
+  { value: "data", label: "User Data", icon: "Database" },
 ];
 
 export function AdminNav({ activeTab, onTabChange }: AdminNavProps) {
   const isMobile = useIsMobile();
 
   const getIcon = (value: string) => {
-    switch (value) {
-      case "events": return <LayoutGrid className="w-4 h-4" />;
-      case "ai_oracle": return <Cpu className="w-4 h-4" />;
-      case "scout": return <Sparkles className="w-4 h-4" />;
-      case "automation": return <Bot className="w-4 h-4" />;
-      case "data": return <Database className="w-4 h-4" />;
-      default: return null;
-    }
+    const iconName = TABS.find(t => t.value === value)?.icon || 'HelpCircle';
+    const IconComponent = require('lucide-react')[iconName];
+    return <IconComponent className="w-4 h-4" />;
   }
 
   if (isMobile === undefined) {

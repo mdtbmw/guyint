@@ -48,9 +48,15 @@ const resolveEventOutcomeFlow = ai.defineFlow(
         if (!output) {
             throw new Error("The AI Oracle could not determine a definitive outcome for this event.");
         }
-        return output;
+        // Ensure the output conforms to the schema, even though the model is instructed to
+        const parsedOutput = ResolveEventOutputSchema.parse(output);
+        return parsedOutput;
+
     } catch (e: any) {
         console.error("AI event resolution flow failed:", e);
+        if (e instanceof z.ZodError) {
+             throw new Error("The AI Oracle returned an invalid outcome format. Please try again.");
+        }
         throw new Error("The AI Oracle encountered an error and could not resolve the event.");
     }
   }

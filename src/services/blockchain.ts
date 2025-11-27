@@ -283,21 +283,21 @@ class IntuitionService {
       const [betPlacedLogs, winningsClaimedLogs, eventCanceledLogs] = await Promise.all([
         this.publicClient.getLogs({
           address: address,
-          event: betPlacedEvent,
+          event: betPlacedEvent as any,
           args: userAddress ? { user: userAddress } : undefined,
           fromBlock,
           toBlock: 'latest',
         }),
         this.publicClient.getLogs({
           address: address,
-          event: winningsClaimedEvent,
+          event: winningsClaimedEvent as any,
           args: userAddress ? { user: userAddress } : undefined,
           fromBlock,
           toBlock: 'latest',
         }),
         this.publicClient.getLogs({
           address: address,
-          event: eventCanceledEvent,
+          event: eventCanceledEvent as any,
           fromBlock,
           toBlock: 'latest',
         }),

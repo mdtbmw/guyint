@@ -1,5 +1,5 @@
 
-import type { Hex } from "viem";
+import type { Hex, Chain } from "viem";
 
 export type UserTier = "Rookie" | "Analyst" | "Intuitive" | "Oracle";
 
@@ -106,4 +106,5 @@ export interface UserStats {
     trustScore: number;
 }
 
-    
+// Re-exporting Chain type for use in other parts of the application
+export type { Chain };

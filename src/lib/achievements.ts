@@ -49,8 +49,8 @@ export const achievements: Achievement[] = [
     description: "Win > $50k",
     icon: "Sword",
     image: "",
-    criteria: (stats: UserStats) => false, // This would require tracking winnings
-    progress: (stats: UserStats) => 0,
+    criteria: (stats: UserStats) => (stats.trustScore ?? 0) >= 50000, // Placeholder criteria
+    progress: (stats: UserStats) => stats.trustScore ?? 0,
     goal: () => 50000,
    }
 ];

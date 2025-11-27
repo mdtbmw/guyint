@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm, Controller } from 'react-hook-form';
@@ -362,7 +363,7 @@ export function SettingsForm() {
             )}
             
             {activeTab === 'api' && (
-                <div className="bg-card/60 backdrop-blur-xl border border-border rounded-[2.5rem] p-8 text-center text-muted-foreground">
+                <div className="bg-card/60 backdrop-blur-xl border border-border rounded-[2.5rem] p-8 text-center text-muted-foreground flex items-center justify-center min-h-[200px]">
                     <p>API Key management is coming soon.</p>
                 </div>
             )}

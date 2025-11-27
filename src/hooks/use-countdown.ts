@@ -58,7 +58,11 @@ export const useCountdown = (endDate: Date | null) => {
         setTimeLeft(calculateTimeLeft(endDate));
 
         const timer = setInterval(() => {
-            setTimeLeft(calculateTimeLeft(endDate));
+            const newTimeLeft = calculateTimeLeft(endDate);
+            setTimeLeft(newTimeLeft);
+             if (newTimeLeft && newTimeLeft.days === 0 && newTimeLeft.hours === 0 && newTimeLeft.minutes === 0 && newTimeLeft.seconds === 0) {
+                clearInterval(timer);
+            }
         }, 1000);
 
         return () => clearInterval(timer);

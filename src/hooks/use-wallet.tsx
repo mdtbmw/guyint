@@ -4,7 +4,7 @@
 import { useAccount, useBalance } from 'wagmi';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
 import { useCallback, useEffect, useState } from 'react';
-import type { WalletClient } from 'viem';
+import type { WalletClient, Chain } from 'viem';
 import { useIsMounted } from './use-is-mounted';
 import { getWalletClient } from 'wagmi/actions';
 import { wagmiConfig } from '@/lib/wagmi';
@@ -52,7 +52,7 @@ export function useWallet() {
     address: address,
     connected: connected,
     isConnecting: isConnecting || !isMounted,
-    chain,
+    chain: chain as Chain | undefined,
     balance,
     balanceLoading,
     fetchBalance,

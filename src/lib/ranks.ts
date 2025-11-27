@@ -1,5 +1,6 @@
 
-import type { UserStats } from './types';
+import type { UserStats, Event } from './types';
+import { formatEther } from 'viem';
 
 export const ranks = [
   { name: "Initiate", score: 0, icon: "Feather", color: "text-gray-400" },
@@ -13,13 +14,13 @@ export const getRank = (trustScore: number | null | undefined) => {
     return [...ranks].reverse().find(r => score >= r.score) || ranks[0];
 };
 
-export const calculateUserStats = (allEvents: any[], userBetsOnAllEvents: any[]): UserStats => {
+export const calculateUserStats = (allEvents: Event[], userBetsOnAllEvents: any[]): UserStats => {
     let wins = 0;
     let losses = 0;
 
     const sortedEvents = allEvents
         .map((event, index) => ({ event, bet: userBetsOnAllEvents[index] }))
-        .filter(({ bet }) => bet.hasBet)
+        .filter(({ bet }) => bet && (bet.yesAmount > 0n || bet.noAmount > 0n))
         .sort((a, b) => (a.event.resolutionDate?.getTime() || 0) - (b.event.resolutionDate?.getTime() || 0));
 
     sortedEvents.forEach(({ event, bet }) => {
