@@ -173,20 +173,15 @@ class IntuitionService {
             functionName: 'nextEventId',
         });
         
-        if (!nextId || nextId <= 1n) {
+        const eventCount = Number(nextId);
+        if (eventCount <= 1) { // nextEventId starts at 1, so <= 1 means no events.
             eventsCache = [];
             lastCacheTime = now;
             return [];
         }
 
-        const eventIds = Array.from({ length: Number(nextId) - 1 }, (_, i) => BigInt(i + 1));
+        const eventIds = Array.from({ length: eventCount - 1 }, (_, i) => BigInt(i + 1));
         
-        if (eventIds.length === 0) {
-          eventsCache = [];
-          lastCacheTime = now;
-          return [];
-        }
-
         const eventPromises = eventIds.map(id => 
           this.publicClient.readContract({
             address: address,
@@ -503,4 +498,3 @@ class IntuitionService {
 }
 
 export const blockchainService = new IntuitionService();
-
