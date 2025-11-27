@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, FC, useEffect, useCallback } from 'react';
@@ -147,7 +148,7 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
       await fetchCategories(); // Re-fetch from the source of truth
       onCategoriesUpdate();
     } else {
-      addNotification({ title: "Error", description: result.error, variant: "destructive", icon: "AlertTriangle", type: 'general' });
+      addNotification({ title: "Error", description: result.error || 'An unknown error occurred.', variant: "destructive", icon: "AlertTriangle", type: 'general' });
     }
   };
 
@@ -160,7 +161,7 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
       await fetchCategories();
       onCategoriesUpdate();
     } else {
-       addNotification({ title: "Error", description: result.error, variant: "destructive", icon: "AlertTriangle", type: 'general' });
+       addNotification({ title: "Error", description: result.error || 'An unknown error occurred.', variant: "destructive", icon: "AlertTriangle", type: 'general' });
     }
   };
 
