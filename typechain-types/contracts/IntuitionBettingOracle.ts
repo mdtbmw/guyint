@@ -91,7 +91,7 @@ export interface IntuitionBettingOracleInterface extends Interface {
       | "createEvent"
       | "events"
       | "getAllEventIds"
-      | "getEventData"
+      | "getEvent"
       | "getMultipleUserBets"
       | "getUserBet"
       | "nextEventId"
@@ -144,7 +144,7 @@ export interface IntuitionBettingOracleInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "getEventData",
+    functionFragment: "getEvent",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -208,10 +208,7 @@ export interface IntuitionBettingOracleInterface extends Interface {
     functionFragment: "getAllEventIds",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "getEventData",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: "getEvent", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getMultipleUserBets",
     data: BytesLike
@@ -475,7 +472,7 @@ export interface IntuitionBettingOracle extends BaseContract {
 
   getAllEventIds: TypedContractMethod<[], [bigint[]], "view">;
 
-  getEventData: TypedContractMethod<
+  getEvent: TypedContractMethod<
     [id: BigNumberish],
     [IntuitionBettingOracle.EventDataStructOutput],
     "view"
@@ -612,7 +609,7 @@ export interface IntuitionBettingOracle extends BaseContract {
     nameOrSignature: "getAllEventIds"
   ): TypedContractMethod<[], [bigint[]], "view">;
   getFunction(
-    nameOrSignature: "getEventData"
+    nameOrSignature: "getEvent"
   ): TypedContractMethod<
     [id: BigNumberish],
     [IntuitionBettingOracle.EventDataStructOutput],

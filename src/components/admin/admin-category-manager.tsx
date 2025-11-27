@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, FC, useEffect, useCallback } from 'react';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, Edit, Trash2, AlertTriangle, ChevronsUpDown, Save } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, AlertTriangle, ChevronsUpDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { updateCategories, readCategories } from '@/app/admin/actions';
 import {
@@ -21,14 +20,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription
-} from '@/components/ui/dialog';
 import {
   Popover,
   PopoverContent,
@@ -63,7 +54,7 @@ const IconPicker: FC<IconPickerProps> = ({ value, onSelect }) => {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full sm:w-[200px] justify-between"
+          className="w-full sm:w-[280px] justify-between"
         >
           {value ? (
             <div className="flex items-center gap-2">
@@ -76,7 +67,7 @@ const IconPicker: FC<IconPickerProps> = ({ value, onSelect }) => {
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent className="w-[280px] p-0">
         <Input
           placeholder="Search icons..."
           className="h-9 rounded-b-none border-x-0 border-t-0"
@@ -107,50 +98,6 @@ const IconPicker: FC<IconPickerProps> = ({ value, onSelect }) => {
   );
 };
 
-const CategoryEditDialog = ({ category, isOpen, onOpenChange, onSave }: { category: FullCategory | null, isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (updatedCategory: FullCategory) => void }) => {
-    const [name, setName] = useState('');
-    const [icon, setIcon] = useState('');
-    const [image, setImage] = useState('');
-    const [aiHint, setAiHint] = useState('');
-
-    useEffect(() => {
-        if(category) {
-            setName(category.name);
-            setIcon(category.icon);
-            setImage(category.image);
-            setAiHint(category.aiHint);
-        }
-    }, [category]);
-
-    if (!category) return null;
-
-    const handleSave = () => {
-        onSave({ id: category.id, name, icon, image, aiHint });
-        onOpenChange(false);
-    }
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Edit Category: {category.name}</DialogTitle>
-                    <DialogDescription>Update the details for this category.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                    <Input value={name} onChange={e => setName(e.target.value)} placeholder="Category Name" />
-                    <IconPicker value={icon} onSelect={setIcon} />
-                    <Input value={image} onChange={e => setImage(e.target.value)} placeholder="Placeholder Image URL" />
-                    <Input value={aiHint} onChange={e => setAiHint(e.target.value)} placeholder="AI Hint (for image search)" />
-                </div>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={handleSave}><Save className="w-4 h-4 mr-2"/>Save Changes</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
 export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdate: () => void }) {
   const { addNotification } = useNotifications();
   const [categories, setCategories] = useState<FullCategory[]>([]);
@@ -158,11 +105,7 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
   const [error, setError] = useState<string | null>(null);
   
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [newImageUrl, setNewImageUrl] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('');
-
-  const [editingCategory, setEditingCategory] = useState<FullCategory | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   const fetchCategories = useCallback(async () => {
     setLoading(true);
@@ -191,7 +134,7 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
       id: String(Date.now()),
       name: newCategoryName,
       icon: selectedIcon,
-      image: newImageUrl || `https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1920&auto=format&fit=crop`,
+      image: `https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1920&auto=format&fit=crop`, // Default placeholder
       aiHint: newCategoryName.toLowerCase(),
     };
 
@@ -201,11 +144,10 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
       addNotification({ title: "Category Added", description: `Successfully added '${newCategoryName}'.`, icon: "CheckCircle", type: 'general' });
       setNewCategoryName('');
       setSelectedIcon('');
-      setNewImageUrl('');
-      await fetchCategories();
+      await fetchCategories(); // Re-fetch from the source of truth
       onCategoriesUpdate();
     } else {
-      addNotification({ title: "Error", description: result.error || 'An unknown error occurred', variant: "destructive", icon: "AlertTriangle", type: 'general' });
+      addNotification({ title: "Error", description: result.error, variant: "destructive", icon: "AlertTriangle", type: 'general' });
     }
   };
 
@@ -218,27 +160,9 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
       await fetchCategories();
       onCategoriesUpdate();
     } else {
-       addNotification({ title: "Error", description: result.error || 'An unknown error occurred', variant: "destructive", icon: "AlertTriangle", type: 'general' });
+       addNotification({ title: "Error", description: result.error, variant: "destructive", icon: "AlertTriangle", type: 'general' });
     }
   };
-
-  const handleEditCategory = (category: FullCategory) => {
-    setEditingCategory(category);
-    setIsEditDialogOpen(true);
-  }
-
-  const handleSaveCategory = async (updatedCategory: FullCategory) => {
-      const updatedCategories = categories.map(c => c.id === updatedCategory.id ? updatedCategory : c);
-      const result = await updateCategories(updatedCategories);
-      if(result.success) {
-        addNotification({ title: "Category Updated", description: `Successfully updated '${updatedCategory.name}'.`, icon: "CheckCircle", type: 'general' });
-        await fetchCategories();
-        onCategoriesUpdate();
-      } else {
-        addNotification({ title: "Error", description: result.error || 'An unknown error occurred', variant: "destructive", icon: "AlertTriangle", type: 'general' });
-      }
-  }
-
 
   if (error) {
     return (
@@ -261,10 +185,10 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
           <CardTitle>Add New Category</CardTitle>
           <CardDescription>Create a new category for events on the platform. This will update the system's configuration file.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div className="flex flex-col sm:flex-row gap-2">
             <Input 
-              placeholder="New Category Name" 
+              placeholder="New Category Name (e.g., Entertainment)" 
               className="flex-1"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
@@ -273,16 +197,11 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
               value={selectedIcon}
               onSelect={setSelectedIcon}
             />
-          </div>
-           <Input 
-              placeholder="Default Image URL (Optional)" 
-              value={newImageUrl}
-              onChange={(e) => setNewImageUrl(e.target.value)}
-            />
-           <Button onClick={handleAddCategory} className="w-full sm:w-auto">
+            <Button onClick={handleAddCategory} className="w-full sm:w-auto">
                <Plus className="w-4 h-4 mr-2" />
-               Add Category
+               Add
             </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -299,7 +218,6 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
               <TableRow>
                 <TableHead>Icon</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Image URL</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -308,8 +226,7 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
                     Array.from({length: 3}).map((_, i) => (
                         <TableRow key={i}>
                             <TableCell><Skeleton className="h-6 w-6" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                             <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                         </TableRow>
                     ))
@@ -318,9 +235,7 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
                         <TableRow key={cat.id}>
                             <TableCell><DynamicIcon name={cat.icon} /></TableCell>
                             <TableCell className="font-medium">{cat.name}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground truncate max-w-xs">{cat.image}</TableCell>
                             <TableCell className="text-right">
-                               <Button size="sm" variant="ghost" onClick={() => handleEditCategory(cat)}><Edit className="w-4 h-4 text-muted-foreground" /></Button>
                                <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button size="sm" variant="ghost"><Trash2 className="w-4 h-4 text-destructive" /></Button>
@@ -345,7 +260,7 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
                     ))
                 ): (
                     <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                        <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
                             No categories found.
                         </TableCell>
                     </TableRow>
@@ -354,9 +269,6 @@ export function AdminCategoryManager({ onCategoriesUpdate }: { onCategoriesUpdat
           </Table>
         </CardContent>
       </Card>
-      <CategoryEditDialog category={editingCategory} isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onSave={handleSaveCategory} />
     </div>
   );
 }
-
-    

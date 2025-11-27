@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,9 +37,6 @@ import { cn } from '@/lib/utils';
 import { useNotifications } from '@/lib/state/notifications';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import type { GeneratedEvent } from '@/ai/flows/generate-event-flow';
-import { useAuthGuard } from '@/hooks/use-auth-guard';
-import { useAtom } from 'jotai';
-import { generatedEventAtom } from '@/lib/state/admin';
 
 const createEventFormSchema = z.object({
   question: z
@@ -76,18 +72,18 @@ type CreateEventFormValues = z.infer<typeof createEventFormSchema>;
 
 interface CreateEventFormProps {
   categories: Category[];
+  onSuccess: (eventId: string) => void;
+  isSuccess: boolean;
+  lastEventId: string | null;
+  onReset: () => void;
+  prefillData?: GeneratedEvent | null;
 }
 
-export function CreateEventForm({ categories }: CreateEventFormProps) {
-  const { isLoading: isAuthLoading } = useAuthGuard({ requireAdmin: true });
+export function CreateEventForm({ categories, onSuccess, isSuccess, lastEventId, onReset, prefillData }: CreateEventFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { walletClient, address } = useWallet();
   const router = useRouter();
   const { addNotification } = useNotifications();
-
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [lastEventId, setLastEventId] = useState<string | null>(null);
-  const [generatedEvent, setGeneratedEvent] = useAtom(generatedEventAtom);
 
   const form = useForm<CreateEventFormValues>({
     resolver: zodResolver(createEventFormSchema),
@@ -103,42 +99,17 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
     },
     mode: 'onChange',
   });
-  
-  // Prefill form with AI generated data if available
+
   useEffect(() => {
-    if (generatedEvent) {
+    if (prefillData) {
       form.reset({
         ...form.getValues(), // keep existing values like dates/stakes if user navigated back
-        question: generatedEvent.question,
-        description: generatedEvent.description,
-        category: generatedEvent.category,
+        question: prefillData.question,
+        description: prefillData.description,
+        category: prefillData.category,
       });
     }
-  }, [generatedEvent, form]);
-  
-  // Clear generated event atom on unmount
-  useEffect(() => {
-    return () => {
-        if (generatedEvent) {
-            setGeneratedEvent(null);
-        }
-    };
-  }, [generatedEvent, setGeneratedEvent]);
-
-
-  const onSuccess = (eventId: string) => {
-      setIsSuccess(true);
-      setLastEventId(eventId);
-      if (generatedEvent) {
-          setGeneratedEvent(null);
-      }
-  };
-
-  const onReset = () => {
-      setIsSuccess(false);
-      setLastEventId(null);
-  };
-
+  }, [prefillData, form]);
 
   async function onSubmit(data: CreateEventFormValues) {
     if (!walletClient || !address) {
@@ -178,24 +149,20 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
     }
   }
 
-  if (isAuthLoading) {
-      return <div className="text-center py-12">Checking permissions...</div>;
-  }
-
   if (isSuccess) {
     return (
         <div className="text-center py-8 space-y-4">
             <PartyPopper className="w-16 h-16 text-primary mx-auto" />
-            <h3 className="text-2xl font-bold">Signal Created!</h3>
+            <h3 className="text-2xl font-bold">Event Created!</h3>
             <p className="text-muted-foreground">Your new prediction market is live on the blockchain.</p>
             <div className="flex gap-2 justify-center pt-4">
-                <Button variant="outline" onClick={onReset} className="active-press">
+                <Button variant="outline" onClick={onReset}>
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Create Another Signal
+                    Create Another Event
                 </Button>
                 {lastEventId && (
-                    <Button onClick={() => router.push(`/event/${lastEventId}`)} className="active-press">
-                        View Your New Signal
+                    <Button onClick={() => router.push(`/event/${lastEventId}`)}>
+                        View Your New Event
                     </Button>
                 )}
             </div>
@@ -216,11 +183,10 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center gap-2">
-                      <FormLabel>Signal Question</FormLabel>
+                      <FormLabel>Event Question</FormLabel>
                     </div>
                     <FormControl>
                       <Input
-                        className="input-glow"
                         placeholder="e.g., Will BTC surpass $100,000 by the end of the year?"
                         {...field}
                       />
@@ -235,12 +201,12 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
                 render={({ field }) => (
                   <FormItem>
                      <div className="flex items-center gap-2">
-                        <FormLabel>Signal Description</FormLabel>
+                        <FormLabel>Event Description</FormLabel>
                     </div>
                     <FormControl>
                       <Textarea
                         placeholder="Provide context, rules, and the source of truth for resolving this event..."
-                        className="min-h-[120px] input-glow"
+                        className="min-h-[120px]"
                         {...field}
                       />
                     </FormControl>
@@ -261,8 +227,8 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
                       ) : (
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={categories.length === 0}>
                         <FormControl>
-                          <SelectTrigger className="input-glow">
-                            <SelectValue placeholder={categories.length > 0 ? "Select a signal category" : "No categories available"} />
+                          <SelectTrigger>
+                            <SelectValue placeholder={categories.length > 0 ? "Select an event category" : "No categories available"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -288,9 +254,9 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
                             <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <FormControl>
                                 <Input
-                                    placeholder="https://images.unsplash.com/... (optional, a relevant image will be used if blank)"
+                                    placeholder="https://images.unsplash.com/..."
                                     {...field}
-                                    className="pl-9 input-glow"
+                                    className="pl-9"
                                 />
                             </FormControl>
                         </div>
@@ -304,7 +270,7 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
              <div className="lg:col-span-2 space-y-6">
                   <Card className="bg-secondary/50">
                       <CardHeader>
-                          <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="w-4 h-4 text-primary"/> Signal Timeline</CardTitle>
+                          <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="w-4 h-4 text-primary"/> Event Timeline</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
                           <FormField
@@ -321,7 +287,7 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
                                       <Button
                                           variant={"outline"}
                                           className={cn(
-                                          "w-full pl-3 text-left font-normal h-10 justify-start input-glow",
+                                          "w-full pl-3 text-left font-normal h-10 justify-start",
                                           !field.value && "text-muted-foreground"
                                           )}
                                       >
@@ -376,7 +342,7 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
                                       <Button
                                           variant={"outline"}
                                           className={cn(
-                                          "w-full pl-3 text-left font-normal h-10 justify-start input-glow",
+                                          "w-full pl-3 text-left font-normal h-10 justify-start",
                                           !field.value && "text-muted-foreground"
                                           )}
                                       >
@@ -434,7 +400,7 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
                                         <FormLabel>Min Stake</FormLabel>
                                     </div>
                                     <FormControl>
-                                      <Input type="number" step="0.001" {...field} className="input-glow"/>
+                                      <Input type="number" step="0.001" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                   </FormItem>
@@ -449,7 +415,7 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
                                         <FormLabel>Max Stake</FormLabel>
                                     </div>
                                     <FormControl>
-                                      <Input type="number" step="0.01" {...field} className="input-glow"/>
+                                      <Input type="number" step="0.01" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                   </FormItem>
@@ -460,9 +426,9 @@ export function CreateEventForm({ categories }: CreateEventFormProps) {
              </div>
           </div>
          
-          <Button type="submit" size="lg" className="w-full active-press" disabled={isLoading || !walletClient}>
+          <Button type="submit" size="lg" className="w-full" disabled={isLoading || !walletClient}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLoading ? 'Submitting Transaction...' : 'Create Signal on Blockchain'}
+            {isLoading ? 'Submitting Transaction...' : 'Create Event on Blockchain'}
           </Button>
         </form>
     </Form>

@@ -3,7 +3,7 @@
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bot, ChevronDown, Cpu, Sparkles, Database, LayoutGrid } from "lucide-react";
+import { Bot, ChevronDown, Cpu, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "../ui/button";
-import { cn } from "@/lib/utils";
 
 interface AdminNavProps {
     activeTab: string;
@@ -19,33 +18,27 @@ interface AdminNavProps {
 }
 
 const TABS = [
-  { value: "events", label: "Signal Management", icon: LayoutGrid },
-  { value: "ai_oracle", label: "AI Oracle", icon: Cpu },
-  { value: "scout", label: "AI Scout", icon: Sparkles },
-  { value: "automation", label: "Automation", icon: Bot },
-  { value: "categories", label: "Categories", icon: LayoutGrid },
-  { value: "data", label: "User Data", icon: Database },
+  { value: "events", label: "Event Management" },
+  { value: "ai_oracle", label: "AI Oracle", icon: <Cpu className="w-4 h-4" /> },
+  { value: "scout", label: "AI Scout", icon: <Sparkles className="w-4 h-4" /> },
+  { value: "automation", label: "Automation", icon: <Bot className="w-4 h-4" /> },
+  { value: "categories", label: "Categories" },
 ];
 
 export function AdminNav({ activeTab, onTabChange }: AdminNavProps) {
   const isMobile = useIsMobile();
 
   if (isMobile === undefined) {
-    return <div className="h-10 w-full bg-card rounded-lg" />;
+    return <div className="h-10 w-full" />;
   }
 
   if (isMobile) {
-    const activeTabInfo = TABS.find(t => t.value === activeTab);
-    const activeLabel = activeTabInfo?.label || "Menu";
-    const ActiveIcon = activeTabInfo?.icon || LayoutGrid;
+    const activeLabel = TABS.find(t => t.value === activeTab)?.label || "Menu";
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
-                    <span className="flex items-center gap-2">
-                        <ActiveIcon className="w-4 h-4" />
-                        {activeLabel}
-                    </span>
+                    {activeLabel}
                     <ChevronDown className="w-4 h-4"/>
                 </Button>
             </DropdownMenuTrigger>
@@ -54,9 +47,8 @@ export function AdminNav({ activeTab, onTabChange }: AdminNavProps) {
                     <DropdownMenuItem
                         key={tab.value}
                         onSelect={() => onTabChange(tab.value)}
-                        className="gap-2"
                     >
-                        <tab.icon className="w-4 h-4" />
+                        {tab.icon && <span className="mr-2">{tab.icon}</span>}
                         {tab.label}
                     </DropdownMenuItem>
                 ))}
@@ -66,22 +58,13 @@ export function AdminNav({ activeTab, onTabChange }: AdminNavProps) {
   }
 
   return (
-    <div className="overflow-x-auto no-scrollbar">
-        <TabsList className="bg-card border h-auto p-1.5">
-            {TABS.map(tab => (
-                <TabsTrigger 
-                    key={tab.value} 
-                    value={tab.value} 
-                    className={cn(
-                        "flex items-center gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background px-4 py-2.5 rounded-lg text-sm",
-                        "whitespace-nowrap"
-                    )}
-                >
-                    <tab.icon className="w-4 h-4" />
-                    {tab.label}
-                </TabsTrigger>
-            ))}
-        </TabsList>
-    </div>
+    <TabsList className="grid w-full grid-cols-5 bg-card border">
+        {TABS.map(tab => (
+            <TabsTrigger key={tab.value} value={tab.value} className="flex items-center gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background">
+                {tab.icon}
+                {tab.label}
+            </TabsTrigger>
+        ))}
+    </TabsList>
   );
 }

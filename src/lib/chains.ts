@@ -1,8 +1,7 @@
-
 import { intuitionChain as intuitionChainDefinition } from './intuition-chain';
 
 // This is the single source of truth for the chain configuration.
-// CRITICAL: We explicitly disable multicall here because the custom INTUITION BETs
+// CRITICAL: We explicitly disable multicall here because the custom Intuition
 // chain does not support the multicall3 contract. This prevents runtime errors.
 export const activeChain = {
     ...intuitionChainDefinition,

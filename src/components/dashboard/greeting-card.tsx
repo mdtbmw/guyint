@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@/hooks/use-wallet';
 import { Button } from '@/components/ui/button';
 import { DynamicIcon } from '@/lib/icons';
@@ -9,10 +9,6 @@ import { useSettings } from '@/lib/state/settings';
 import { useRouter } from 'next/navigation';
 import { useAdmin } from '@/hooks/use-admin';
 import { MobileBalanceDisplay } from './mobile-balance-display';
-import { getRank, calculateUserStats } from '@/lib/ranks';
-import { blockchainService } from '@/services/blockchain';
-import { UserStats } from '@/lib/types';
-import Link from 'next/link';
 
 const principles = [
     "The market is a device for transferring money from the impatient to the patient.",
@@ -32,7 +28,6 @@ export function GreetingCard() {
     const { settings } = useSettings();
     const router = useRouter();
     const { isAdmin } = useAdmin();
-    const [stats, setStats] = useState<UserStats | null>(null);
 
     useEffect(() => {
         const updateTime = () => {
@@ -52,34 +47,15 @@ export function GreetingCard() {
         return () => clearInterval(timer);
     }, []);
 
-    const fetchStats = useCallback(async () => {
-        if (!address) return;
-        try {
-            const allEvents = await blockchainService.getAllEvents();
-            if (allEvents.length > 0) {
-                const eventIds = allEvents.map(e => BigInt(e.id));
-                const userBetsOnAllEvents = await blockchainService.getMultipleUserBets(eventIds, address);
-                const userStats = calculateUserStats(allEvents, userBetsOnAllEvents);
-                setStats(userStats);
-            } else {
-                setStats({ wins: 0, losses: 0, totalBets: 0, accuracy: 0, trustScore: 0 });
-            }
-        } catch (error) {
-            console.error("Failed to fetch user stats for greeting card:", error);
+    const username = settings.username || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "User");
+
+    const handleSuggestClick = () => {
+        if (isAdmin) {
+            router.push('/admin?tab=scout');
+        } else {
+            router.push('/search');
         }
-    }, [address]);
-
-    useEffect(() => {
-        fetchStats();
-    }, [fetchStats]);
-
-    const userRank = useMemo(() => getRank(stats?.trustScore), [stats]);
-    
-    // Use the custom username if set, otherwise fallback to the avatar seed name, or a default.
-    const username = settings.username || "User";
-
-    const suggestHref = isAdmin ? '/admin?tab=scout' : '/search';
-
+    }
 
     return (
        <div className="animate-slide-up">
@@ -88,7 +64,7 @@ export function GreetingCard() {
                 
                 <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
-                        <span className="px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest shadow-sm shadow-primary/10">{userRank.name} Tier</span>
+                        <span className="px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest shadow-sm shadow-primary/10">Sigma Tier</span>
                         <span className="text-muted-foreground text-xs font-mono flex items-center gap-1.5 bg-background/30 px-2 py-1 rounded-lg">
                             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                             <span>{timeString}</span>
@@ -128,12 +104,12 @@ export function GreetingCard() {
                             <p className="text-sm text-foreground font-medium italic pl-3 border-l-2 border-primary/50">"{dailyPrinciple}"</p>
                         </div>
                         <div className="flex gap-3 w-full md:w-auto">
-                           <Link href="/" className="active-press flex-1 md:flex-none bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3.5 rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-lg flex items-center justify-center gap-2">
+                           <button onClick={() => router.push('/')} className="active-press flex-1 md:flex-none bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3.5 rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-lg flex items-center justify-center gap-2">
                                 <DynamicIcon name="Compass" className="w-4 h-4"/> Explore
-                            </Link>
-                            <Link href={suggestHref} className="active-press flex-1 md:flex-none border border-border hover:bg-accent text-foreground px-6 py-3.5 rounded-full text-xs font-bold uppercase tracking-wide transition-all flex items-center justify-center gap-2">
+                            </button>
+                            <button onClick={handleSuggestClick} className="active-press flex-1 md:flex-none border border-border hover:bg-accent text-foreground px-6 py-3.5 rounded-full text-xs font-bold uppercase tracking-wide transition-all flex items-center justify-center gap-2">
                                 Suggest
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 </div>

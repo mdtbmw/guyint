@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Event } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Lock, Ban, CircleDotDashed, Trash2, Edit, ChevronDown } from "lucide-react";
+import { CheckCircle, Lock, Ban, CircleDotDashed, Trash2, Edit, ChevronRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import { DeclareOutcomeDialog, CancelEventDialog } from "./admin-action-dialogs";
@@ -44,7 +44,7 @@ const EventCard = ({ event, onDeclare, onCancel }: { event: Event; onDeclare: (e
     const { chain } = useWallet();
 
     return (
-        <Card className="glass-panel" onClick={() => router.push(`/event/${event.id}`)}>
+        <Card className="bg-secondary/50" onClick={() => router.push(`/event/${event.id}`)}>
             <CardHeader className="pb-4">
                 <div className="flex justify-between items-start">
                     <p className="font-semibold text-foreground pr-4">{event.question}</p>
@@ -53,11 +53,11 @@ const EventCard = ({ event, onDeclare, onCancel }: { event: Event; onDeclare: (e
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                    <p className="text-muted-foreground text-xs uppercase font-bold tracking-wider">Pool</p>
+                    <p className="text-muted-foreground">Pool</p>
                     <p className="font-bold text-foreground">{event.totalPool.toFixed(4)} {chain?.nativeCurrency.symbol}</p>
                 </div>
-                 <div className="text-right">
-                    <p className="text-muted-foreground text-xs uppercase font-bold tracking-wider">Betting Locks</p>
+                 <div>
+                    <p className="text-muted-foreground">Betting Locks</p>
                     <p className="font-bold text-foreground">{event.bettingStopDate ? format(new Date(event.bettingStopDate), "PP") : 'N/A'}</p>
                 </div>
             </CardContent>
@@ -65,7 +65,7 @@ const EventCard = ({ event, onDeclare, onCancel }: { event: Event; onDeclare: (e
                  <Button
                     size="sm"
                     variant="secondary"
-                    className="w-full active-press"
+                    className="w-full"
                     onClick={(e) => { e.stopPropagation(); onDeclare(event); }}
                     disabled={event.status === 'finished' || event.status === 'canceled'}
                     >
@@ -75,7 +75,7 @@ const EventCard = ({ event, onDeclare, onCancel }: { event: Event; onDeclare: (e
                 <Button
                     size="sm"
                     variant="destructive"
-                     className="w-full active-press"
+                     className="w-full"
                     onClick={(e) => { e.stopPropagation(); onCancel(event); }}
                     disabled={event.status !== 'open'}
                     >
@@ -123,7 +123,7 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
     return (
         <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-40 w-full rounded-2xl" />
+                <Skeleton key={i} className="h-40 w-full rounded-lg" />
             ))}
         </div>
     )
@@ -138,12 +138,12 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
                 <EventCard key={event.id} event={event} onDeclare={handleDeclare} onCancel={handleCancel} />
             ))
         ) : (
-             <div className="text-center py-12 text-muted-foreground bg-card rounded-2xl">
+             <div className="text-center py-12 text-muted-foreground bg-card rounded-lg">
                 No events found.
             </div>
         )}
         {canLoadMore && (
-            <Button onClick={handleLoadMore} variant="outline" className="w-full active-press">
+            <Button onClick={handleLoadMore} variant="outline" className="w-full">
                 <ChevronDown className="w-4 h-4 mr-2" />
                 Load More
             </Button>
@@ -152,7 +152,7 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
 
 
     {/* Desktop Table View */}
-    <div className="hidden md:block glass-panel rounded-[2rem]">
+    <div className="hidden md:block rounded-lg border bg-card text-card-foreground">
       <Table>
         <TableHeader>
           <TableRow>
@@ -180,7 +180,6 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
                       <Button 
                         size="sm" 
                         variant="secondary"
-                        className="active-press"
                         onClick={(e) => { e.stopPropagation(); handleDeclare(event); }}
                         disabled={event.status === 'finished' || event.status === 'canceled'}
                         >
@@ -189,7 +188,6 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
                       <Button 
                         size="sm" 
                         variant="destructive"
-                        className="active-press"
                         onClick={(e) => { e.stopPropagation(); handleCancel(event); }}
                         disabled={event.status !== 'open'}
                         >
@@ -211,7 +209,7 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
       </Table>
        {canLoadMore && (
         <div className="p-4 border-t">
-            <Button onClick={handleLoadMore} variant="outline" className="w-full active-press">
+            <Button onClick={handleLoadMore} variant="outline" className="w-full">
                 <ChevronDown className="w-4 h-4 mr-2" />
                 Load More
             </Button>

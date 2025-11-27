@@ -1,12 +1,10 @@
 
-
 'use client';
 
 import { createPublicClient, http, formatEther, parseEther, Hex, Address, Hash, WalletClient, PublicClient, getAddress, UserRejectedRequestError, TransactionReceipt, decodeEventLog } from 'viem';
-import type { Event, BetOutcome, EventStatus, NotificationType, PnLBet, Bet } from '@/lib/types';
+import type { Event, BetOutcome, EventStatus, NotificationType } from '@/lib/types';
 import { IntuitionBettingAbi } from '@/lib/IntuitionBettingAbi';
 import { activeChain } from '@/lib/chains';
-import placeholderData from '@/lib/placeholder-images.json';
 
 // This is a global function to be initialized by a top-level component
 let notify: (notification: Omit<NotificationType, 'id' | 'timestamp' | 'read'>) => void;
@@ -21,17 +19,6 @@ const DESCRIPTION_IMAGE_DELIMITER = '|||';
 let eventsCache: Event[] | null = null;
 let lastCacheTime: number | null = null;
 const CACHE_DURATION_MS = 30000; // 30 seconds
-
-type BetPlacedLog = { eventId: bigint; user: Address; outcome: boolean; amount: bigint; } & { blockNumber: bigint; };
-type WinningsClaimedLog = { eventId: bigint; user: Address; amount: bigint; } & { blockNumber: bigint; };
-type EventCanceledLog = { eventId: bigint } & { blockNumber: bigint; };
-
-interface AllLogs {
-    betPlaced: BetPlacedLog[];
-    winningsClaimed: WinningsClaimedLog[];
-    eventCanceled: EventCanceledLog[];
-}
-
 
 class IntuitionService {
   public publicClient: PublicClient;
@@ -139,22 +126,6 @@ class IntuitionService {
       throw new Error(`A contract error occurred: ${reason}. Please check the console for details.`);
   }
 
-  async getPlatformFee(): Promise<number> {
-    const address = this.getContractAddress();
-    if (!address) return 0;
-
-    try {
-        const feeBps = await this.publicClient.readContract({
-            address: address,
-            abi: IntuitionBettingOracleAbi,
-            functionName: 'platformFeeBps',
-        });
-        return Number(feeBps);
-    } catch (e) {
-        console.error("Failed to fetch platform fee", e);
-        return 300; // Default to 3% if fetch fails
-    }
-  }
 
   async getAllEvents(): Promise<Event[]> {
      const now = Date.now();
@@ -169,17 +140,17 @@ class IntuitionService {
 
         const nextId = await this.publicClient.readContract({
             address: address,
-            abi: IntuitionBettingOracleAbi,
+            abi: IntuitionBettingAbi,
             functionName: 'nextEventId',
         });
         
-        if (!nextId || nextId <= 1n) {
+        if (!nextId || nextId === 0n) {
             eventsCache = [];
             lastCacheTime = now;
             return [];
         }
 
-        const eventIds = Array.from({ length: Number(nextId) - 1 }, (_, i) => BigInt(i + 1));
+        const eventIds = Array.from({ length: Number(nextId) }, (_, i) => BigInt(i));
         
         if (eventIds.length === 0) {
           eventsCache = [];
@@ -190,8 +161,8 @@ class IntuitionService {
         const eventPromises = eventIds.map(id => 
           this.publicClient.readContract({
             address: address,
-            abi: IntuitionBettingOracleAbi,
-            functionName: 'getEventData',
+            abi: IntuitionBettingAbi,
+            functionName: 'getEvent',
             args: [id],
           }).catch(err => {
             console.error(`Failed to fetch event ${id}:`, err);
@@ -199,29 +170,23 @@ class IntuitionService {
           })
         );
       
-        const onchainResults = await Promise.all(eventPromises);
-        
-        // **CRITICAL FIX**: Filter out any null results *before* attempting to process the array.
-        const validResults = onchainResults.filter(res => res !== null);
+      const onchainResults = await Promise.all(eventPromises);
 
-        if (!validResults) {
-            throw new Error("Received invalid results from blockchain while fetching events.");
-        }
+      const events = onchainResults
+        .map((res, index) => {
+          if (res) {
+            return this.normalizeOnChainEvent(res, eventIds[index]);
+          }
+          return null;
+        })
+        .filter((e): e is Event => e !== null && e.id !== "0" && e.question !== '');
 
-        const events = validResults
-          .map((res, index) => {
-            // Note: `index` here is for `validResults`, we need original `eventIds` mapping
-            const originalId = eventIds[onchainResults.indexOf(res)];
-            return this.normalizeOnChainEvent(res, originalId);
-          })
-          .filter((e): e is Event => e !== null && e.question !== '');
+      const sortedEvents = events.sort((a, b) => (b.bettingStopDate?.getTime() || 0) - (a.bettingStopDate?.getTime() || 0));
+      
+      eventsCache = sortedEvents;
+      lastCacheTime = now;
 
-        const sortedEvents = events.sort((a, b) => (b.bettingStopDate?.getTime() || 0) - (a.bettingStopDate?.getTime() || 0));
-        
-        eventsCache = sortedEvents;
-        lastCacheTime = now;
-
-        return sortedEvents;
+      return sortedEvents;
 
     } catch (err: any) {
        console.error('Core `getAllEvents` call failed. This could be due to an RPC issue or invalid contract address.', err.message);
@@ -231,7 +196,7 @@ class IntuitionService {
 
   async getEventById(eventId: string): Promise<Event | null> {
     const address = this.getContractAddress();
-    if (!address || !eventId) return null;
+    if (!address) return null; // Return empty if no address is set
 
     if (eventsCache) {
       const cachedEvent = eventsCache.find(e => e.id === eventId);
@@ -241,13 +206,11 @@ class IntuitionService {
     try {
       const eventData = await this.publicClient.readContract({
         address: address,
-        abi: IntuitionBettingOracleAbi,
-        functionName: 'getEventData',
+        abi: IntuitionBettingAbi,
+        functionName: 'getEvent',
         args: [BigInt(eventId)],
       });
       
-      if (!eventData || !eventData.question) return null;
-
       const participants: Address[] = []; 
 
       const normalized = this.normalizeOnChainEvent(eventData, BigInt(eventId));
@@ -255,12 +218,11 @@ class IntuitionService {
       return normalized;
 
     } catch (err) {
-      console.error(`Failed to get event by ID ${eventId}:`, err);
       return null;
     }
   }
   
-  async getMultipleUserBets(eventIds: bigint[], userAddress: Address): Promise<{yesAmount: bigint, noAmount: bigint, claimed: boolean}[]> {
+  async getMultipleUserBets(eventIds: bigint[], userAddress: Address): Promise<{yesAmount: bigint, noAmount: bigint, claimed: boolean, hasBet: boolean}[]> {
     const address = this.getContractAddress();
     if (!address) return [];
 
@@ -268,12 +230,13 @@ class IntuitionService {
         const betPromises = eventIds.map(id => 
             this.publicClient.readContract({
                 address: address,
-                abi: IntuitionBettingOracleAbi,
+                abi: IntuitionBettingAbi,
                 functionName: 'getUserBet',
                 args: [id, userAddress],
-            }).catch(err => {
+            }).then(bet => ({ ...bet, hasBet: bet.yesAmount > 0n || bet.noAmount > 0n }))
+            .catch(err => {
                 console.error(`Failed to fetch user bet for event ${id}:`, err);
-                return { yesAmount: 0n, noAmount: 0n, claimed: false }; // Return default on failure
+                return { yesAmount: 0n, noAmount: 0n, claimed: false, hasBet: false }; // Return default on failure
             })
         );
         const results = await Promise.all(betPromises);
@@ -281,71 +244,39 @@ class IntuitionService {
     } catch(e) {
         console.error("Batch fetch for user bets failed", e);
         // Return an array of default values matching the input length
-        return eventIds.map(() => ({ yesAmount: 0n, noAmount: 0n, claimed: false }));
+        return eventIds.map(() => ({ yesAmount: 0n, noAmount: 0n, claimed: false, hasBet: false }));
     }
   }
 
-    async getAllLogs(userAddress?: Address): Promise<AllLogs> {
-        const address = this.getContractAddress();
-        if (!address) return { betPlaced: [], winningsClaimed: [], eventCanceled: [] };
+  async getAllLogs() {
+    const address = this.getContractAddress();
+    if (!address) return { betPlaced: [] };
 
-        try {
-            const fromBlock = 0n;
+    try {
+      const betPlacedLogs = await this.publicClient.getLogs({
+        address: address,
+        event: {
+          type: 'event',
+          name: 'BetPlaced',
+          inputs: [
+            { indexed: true, name: 'eventId', type: 'uint256' },
+            { indexed: true, name: 'user', type: 'address' },
+            { indexed: false, name: 'outcome', type: 'bool' },
+            { indexed: false, name: 'amount', type: 'uint256' },
+          ],
+        },
+        fromBlock: 0n,
+        toBlock: 'latest',
+      });
 
-            const rawLogs = await this.publicClient.getLogs({
-                address,
-                fromBlock,
-                toBlock: 'latest',
-            });
-
-            const betPlaced: BetPlacedLog[] = [];
-            const winningsClaimed: WinningsClaimedLog[] = [];
-            const eventCanceled: EventCanceledLog[] = [];
-
-            for (const log of rawLogs) {
-                try {
-                    const decodedLog = decodeEventLog({
-                        abi: IntuitionBettingOracleAbi,
-                        data: log.data,
-                        topics: log.topics,
-                    });
-
-                    if (userAddress && 'user' in decodedLog.args && decodedLog.args.user !== userAddress) {
-                        continue;
-                    }
-
-                    if (decodedLog.eventName === 'BetPlaced' && decodedLog.args) {
-                        betPlaced.push({
-                            ...(decodedLog.args as { eventId: bigint; user: Address; outcome: boolean; amount: bigint; }),
-                            blockNumber: log.blockNumber,
-                        });
-                    } else if (decodedLog.eventName === 'WinningsClaimed' && decodedLog.args) {
-                        winningsClaimed.push({
-                             ...(decodedLog.args as { eventId: bigint; user: Address; amount: bigint; }),
-                            blockNumber: log.blockNumber,
-                        });
-                    } else if (decodedLog.eventName === 'EventCanceled' && decodedLog.args) {
-                        eventCanceled.push({
-                            ...(decodedLog.args as { eventId: bigint; }),
-                            blockNumber: log.blockNumber,
-                        });
-                    }
-                } catch (e) {
-                    // Ignore logs that don't match our ABI
-                }
-            }
-
-            return {
-                betPlaced,
-                winningsClaimed,
-                eventCanceled,
-            };
-
-        } catch (e) {
-            console.error("Failed to fetch logs:", e);
-            return { betPlaced: [], winningsClaimed: [], eventCanceled: [] };
-        }
+      return {
+        betPlaced: betPlacedLogs.map(log => log.args),
+      };
+    } catch (e) {
+      console.error("Failed to fetch logs:", e);
+      return { betPlaced: [] };
     }
+  }
   
   async createEvent(
     walletClient: WalletClient, 
@@ -367,14 +298,12 @@ class IntuitionService {
         title: 'Transaction Submitted',
         description: `Creating event... please wait for confirmation.`,
         icon: 'Loader2',
-        type: 'general' 
+        type: 'onBetPlaced' // This should be a generic type
     });
 
     try {
         const fullDescription = description;
         
-        const finalImageUrl = imageUrl || placeholderData.categories.find(c => c.name === category)?.image || '';
-
         const bettingTimestamp = BigInt(Math.floor(bettingStopDate.getTime() / 1000));
         const resolutionTimestamp = BigInt(Math.floor(resolutionDate.getTime() / 1000));
 
@@ -384,16 +313,16 @@ class IntuitionService {
         const { request } = await this.publicClient.simulateContract({
             account,
             address: address,
-            abi: IntuitionBettingOracleAbi,
+            abi: IntuitionBettingAbi,
             functionName: 'createEvent',
-            args: [question, fullDescription, category, finalImageUrl, bettingTimestamp, resolutionTimestamp, minStakeWei, maxStakeWei],
+            args: [question, fullDescription, category, imageUrl || '', bettingTimestamp, resolutionTimestamp, minStakeWei, maxStakeWei],
         });
         const txHash = await walletClient.writeContract(request);
         const receipt = await this.waitForTransaction(txHash);
 
         const eventLog = receipt.logs.find(log => {
           try {
-            const decoded = decodeEventLog({ abi: IntuitionBettingOracleAbi, data: log.data, topics: log.topics });
+            const decoded = decodeEventLog({ abi: IntuitionBettingAbi, ...log });
             return decoded.eventName === 'EventCreated';
           } catch {
             return false;
@@ -402,7 +331,7 @@ class IntuitionService {
 
         if (!eventLog) throw new Error('Could not find EventCreated log in transaction receipt');
 
-        const decodedLog = decodeEventLog({ abi: IntuitionBettingOracleAbi, data: eventLog.data, topics: eventLog.topics });
+        const decodedLog = decodeEventLog({ abi: IntuitionBettingAbi, ...eventLog });
         const eventId = (decodedLog.args as any)?.id?.toString();
 
         if (!eventId) throw new Error('Could not determine eventId from transaction receipt');
@@ -415,7 +344,7 @@ class IntuitionService {
             icon: 'CheckCircle',
             variant: 'success',
             href: `/event/${eventId}`,
-            type: 'general'
+            type: 'onBetPlaced' // This should be generic
         });
 
         return { txHash, eventId };
@@ -436,7 +365,7 @@ class IntuitionService {
         const { request } = await this.publicClient.simulateContract({
         account: walletClient.account,
         address: address,
-        abi: IntuitionBettingOracleAbi,
+        abi: IntuitionBettingAbi,
         functionName: 'placeBet',
         args: [eventId, outcome],
         value: amount
@@ -456,7 +385,7 @@ class IntuitionService {
         const { request } = await this.publicClient.simulateContract({
             account: walletClient.account,
             address: address,
-            abi: IntuitionBettingOracleAbi,
+            abi: IntuitionBettingAbi,
             functionName: 'resolveEvent',
             args: [eventId, outcome],
         });
@@ -474,7 +403,7 @@ class IntuitionService {
         const { request } = await this.publicClient.simulateContract({
             account: walletClient.account,
             address: address,
-            abi: IntuitionBettingOracleAbi,
+            abi: IntuitionBettingAbi,
             functionName: 'cancelEvent',
             args: [eventId],
         });
@@ -493,7 +422,7 @@ class IntuitionService {
         const { request } = await this.publicClient.simulateContract({
             account: walletClient.account,
             address: address,
-            abi: IntuitionBettingOracleAbi,
+            abi: IntuitionBettingAbi,
             functionName: 'claim',
             args: [eventId],
         });

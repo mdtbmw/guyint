@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from './use-wallet';
 import { useAdmin } from './use-admin';
@@ -24,28 +25,38 @@ export function useAuthGuard(options: AuthGuardOptions = {}) {
   const { connected, isConnecting } = useWallet();
   const { isAdmin, loading: adminLoading } = useAdmin();
 
-  const isLoading = isConnecting || adminLoading;
+  // The overall loading state depends on wallet connection and, if required, admin verification.
+  const isLoading = isConnecting || (requireAdmin && adminLoading);
+  
+  // A separate state to track if the initial verification round is complete.
+  // This prevents redirects on the very first render before hooks have settled.
+  const [isVerifying, setIsVerifying] = useState(true);
 
   useEffect(() => {
-    // If we're still figuring out connection status or admin status, do nothing yet.
-    if (isLoading) {
+    // Once loading is finished, we can stop verifying.
+    if (!isLoading) {
+      setIsVerifying(false);
+    }
+    
+    // Don't perform redirects until the initial verification is complete.
+    if (isVerifying) {
       return;
     }
 
-    // If a connection is required and the user is not connected, redirect to home.
+    // If not connected, always redirect to home.
     if (!connected) {
-      router.replace('/');
+      router.push('/');
       return;
     }
 
-    // If admin is required and the user is definitively NOT an admin, redirect.
+    // If admin is required and the connected user is not an admin, redirect.
     if (requireAdmin && !isAdmin) {
-      router.replace('/');
+      router.push('/');
       return;
     }
     
-  }, [isLoading, connected, isAdmin, requireAdmin, router]);
+  }, [isLoading, isVerifying, connected, isAdmin, requireAdmin, router]);
 
-  // Return true if wallet is connecting OR if we require admin and admin status is loading.
+  // The page should show a loading state as long as hooks are resolving.
   return { isLoading };
 }

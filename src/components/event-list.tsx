@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from "react";
@@ -10,7 +11,6 @@ import { AlertTriangle, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
 import { expandSearchQuery } from "@/ai/flows/expand-search-query";
 import { useSearchParams } from "next/navigation";
-import { useAdmin } from "@/hooks/use-admin";
 
 const ITEMS_PER_PAGE = 5; // 5 because SuggestMarketCard takes 1 slot in a 3-col grid
 
@@ -29,8 +29,7 @@ export function EventList({ category, status, searchTerm, isUpcoming }: EventLis
     
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
-    const searchParams = useSearchParams();
-    const { isAdmin } = useAdmin();
+    const searchParams = useSearchParams(); 
 
     const fetchEvents = async () => {
         setLoading(true);
@@ -164,7 +163,7 @@ export function EventList({ category, status, searchTerm, isUpcoming }: EventLis
                     Fetch Again
                 </Button>
             </div>
-            {isAdmin && <SuggestMarketCard />}
+            <SuggestMarketCard />
             </>
         )
     }
@@ -174,8 +173,8 @@ export function EventList({ category, status, searchTerm, isUpcoming }: EventLis
             {visibleEvents.map((event) => (
                 <EventCard key={event.id} event={{...event, id: event.id as string}} />
             ))}
-            {/* Always show suggest card if there's space and user is admin */}
-            {isAdmin && visibleEvents.length < (ITEMS_PER_PAGE + 1) && <SuggestMarketCard />}
+            {/* Always show suggest card if there's space */}
+            {visibleEvents.length < (ITEMS_PER_PAGE + 1) && <SuggestMarketCard />}
             
             {canLoadMore && (
                 <div className="md:col-span-2 xl:col-span-3 text-center">

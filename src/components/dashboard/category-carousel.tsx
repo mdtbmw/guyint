@@ -3,6 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+import Autoplay from 'embla-carousel-autoplay';
 import placeholderData from '@/lib/placeholder-images.json';
 import { DynamicIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,13 @@ export function CategoryCarousel({ categoryFilter, setCategoryFilter }: Category
                     loop: true,
                     dragFree: true,
                 }}
+                plugins={[
+                    Autoplay({
+                        delay: 2000,
+                        stopOnInteraction: true,
+                        stopOnMouseEnter: true,
+                    }),
+                ]}
                 className="w-full"
             >
                 <CarouselContent className="-ml-3">

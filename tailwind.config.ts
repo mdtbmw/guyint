@@ -19,7 +19,7 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-space-grotesk)', 'sans-serif'],
+        sans: ['var(--font-inter)', 'sans-serif'],
         display: ['var(--font-space-grotesk)', 'sans-serif'],
         mono: ['var(--font-jetbrains-mono)', 'monospace'],
       },
@@ -59,14 +59,10 @@ const config: Config = {
         },
         gold: {
             DEFAULT: '#F59E0B',
-            600: '#D97706', // amber-600
-            500: '#F59E0B', // amber-500
-            400: '#FBBF24', // amber-400
-            300: '#FCD34D', // amber-300
+            500: '#F59E0B',
+            400: '#FBBF24',
+            300: '#FCD34D',
             glow: 'rgba(245, 158, 11, 0.15)'
-        },
-         yellow: {
-            700: '#B45309' // amber-700
         },
         emerald: { 500: '#10B981', 400: '#34D399', glow: 'rgba(16, 185, 129, 0.3)' },
         rose: { 500: '#F43F5E', 400: '#FB7185', glow: 'rgba(244, 63, 94, 0.3)' },
@@ -141,7 +137,6 @@ const config: Config = {
       },
        backgroundImage: {
           'holographic': 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 20%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.1) 80%, rgba(255,255,255,0) 100%)',
-          'noise': "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%221%22/%3E%3C/svg%3E')",
       }
     },
   },

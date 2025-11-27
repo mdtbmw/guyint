@@ -11,14 +11,13 @@ import { Web3Provider } from '@/components/web3-provider';
 import { Provider as JotaiProvider } from 'jotai';
 import { NotificationsProvider } from '@/lib/state/notifications';
 import { SettingsProvider } from '@/lib/state/settings';
-import { HeaderStateProvider } from '@/lib/state/header';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const spaceGrotesk = SpaceGrotesk({ subsets: ['latin'], variable: '--font-space-grotesk' });
 const jetbrainsMono = JetBrainsMono({ subsets: ['latin'], variable: '--font-jetbrains-mono' });
 
 export const metadata: Metadata = {
-  title: 'INTUITION BETs — The Signal in the Noise',
+  title: 'Intuition BETs — The Signal in the Noise',
   description: 'A premium prediction arena. High stakes, pure signal, verified outcomes.',
   viewport: {
     width: 'device-width',
@@ -40,8 +39,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
-      <body className={cn("h-[100dvh] overflow-y-auto bg-background font-sans", inter.variable, spaceGrotesk.variable, jetbrainsMono.variable)} suppressHydrationWarning>
-        <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.04] bg-noise"></div>
+      <body className={cn("h-dvh overflow-hidden", inter.variable, spaceGrotesk.variable, jetbrainsMono.variable)} suppressHydrationWarning>
+        <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.04]" style={{backgroundImage: "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%221%22/%3E%3C/svg%3E')"}}></div>
         
         <JotaiProvider>
           <ThemeProvider
@@ -53,11 +52,11 @@ export default function RootLayout({
             <Web3Provider>
               <SettingsProvider>
                 <NotificationsProvider>
-                  <HeaderStateProvider>
-                    <MainLayout>
+                  <MainLayout>
+                    <div className="p-4 sm:p-6 lg:p-8">
                       {children}
-                    </MainLayout>
-                  </HeaderStateProvider>
+                    </div>
+                  </MainLayout>
                 </NotificationsProvider>
               </SettingsProvider>
             </Web3Provider>

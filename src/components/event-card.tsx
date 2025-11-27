@@ -78,19 +78,23 @@ export function EventCard({ event }: { event: Event }) {
 
 export function SuggestMarketCard() {
     const router = useRouter();
-    const { isAdmin, loading } = useAdmin();
+    const { isAdmin } = useAdmin();
 
-    if (loading || !isAdmin) {
-        return null;
-    }
+    const handleClick = () => {
+        if (isAdmin) {
+            router.push('/admin?tab=scout');
+        } else {
+            router.push('/search');
+        }
+    };
 
     return (
-        <button onClick={() => router.push('/admin?tab=scout')} className="rounded-[2.5rem] border-2 border-dashed border-zinc-700 dark:border-white/10 p-6 flex flex-col items-center justify-center text-center hover:bg-zinc-800/50 dark:hover:bg-white/[0.02] hover:border-gold-500/30 transition-all cursor-pointer active-press h-[340px] bg-white/50 dark:bg-black/20 group">
+        <button onClick={handleClick} className="rounded-[2.5rem] border-2 border-dashed border-zinc-700 dark:border-white/10 p-6 flex flex-col items-center justify-center text-center hover:bg-zinc-800/50 dark:hover:bg-white/[0.02] hover:border-gold-500/30 transition-all cursor-pointer active-press h-[340px] bg-white/50 dark:bg-black/20 group">
             <div className="w-16 h-16 rounded-full bg-zinc-800 dark:bg-white/5 flex items-center justify-center mb-5 text-zinc-500 group-hover:bg-gold-500 group-hover:text-black transition-all duration-500 shadow-xl ring-1 ring-inset ring-white/10">
                 <DynamicIcon name="Lightbulb" className="w-8 h-8" strokeWidth="1.5" />
             </div>
-            <h3 className="text-zinc-900 dark:text-white font-display text-2xl font-bold mb-3">Suggest a Market</h3>
-            <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-2 max-w-[200px] leading-relaxed">Use the AI Scout to find new, verifiable event topics for the platform.</p>
+            <h3 className="text-zinc-900 dark:text-white font-display text-2xl font-bold mb-3">Spot a Trend?</h3>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-2 max-w-[200px] leading-relaxed">Suggest a market to the DAO. Earn <span className="text-gold-500 font-bold">$TRUST</span> if validated.</p>
         </button>
     )
 }

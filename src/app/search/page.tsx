@@ -19,13 +19,11 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAuthGuard } from '@/hooks/use-auth-guard';
 
 type FilterType = 'hot' | 'new' | 'whales' | null;
 const ITEMS_PER_PAGE = 5;
 
 export default function OracleSearchPage() {
-  useAuthGuard();
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,7 +154,7 @@ export default function OracleSearchPage() {
       }
       
       const startTimeout = setTimeout(() => {
-        if (inputRef.current && inputRef.current !== document.activeElement) {
+        if (inputRef.current !== document.activeElement) {
           typewriter();
         }
       }, 1000);
@@ -172,16 +170,25 @@ export default function OracleSearchPage() {
   };
 
   return (
-    <div className="space-y-8 md:space-y-10 animate-slide-up">
-        <PageHeader title="Oracle Search" description="Query the on-chain event database." />
-        <div>
+    <div className="space-y-8 md:space-y-10">
+        <div className="animate-slide-up">
+            <div className="flex justify-between items-end mb-4 px-2">
+                <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground tracking-tight">
+                    Query Protocol
+                </h1>
+                 <div className="hidden md:flex items-center gap-4 text-xs font-mono text-muted-foreground">
+                    <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> BLOCK: #19,240,121</span>
+                    <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-primary rounded-full"></span> GAS: 12 GWEI</span>
+                </div>
+            </div>
+
              <div className="relative group terminal-glow rounded-[1.5rem] transition-all duration-300">
                 <div className="absolute inset-0 bg-card/80 backdrop-blur-xl rounded-[1.5rem]"></div>
                 
                 <div className="relative flex items-center h-16 md:h-20 px-6 border border-border rounded-[1.5rem] overflow-hidden">
                     <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent animate-scan pointer-events-none opacity-50"></div>
                     
-                    <span className="text-primary font-mono text-lg mr-3">{'>_'}</span>
+                    <span className="text-primary font-mono text-lg mr-3">>_</span>
                     <Input
                         id="oracle-input"
                         ref={inputRef}
@@ -237,7 +244,7 @@ export default function OracleSearchPage() {
             </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
             <div className="lg:col-span-2 space-y-6">
                 <div className="flex items-center justify-between">
                     <h2 className="text-xs font-mono font-bold uppercase text-muted-foreground flex items-center gap-2">
@@ -247,7 +254,7 @@ export default function OracleSearchPage() {
                 </div>
 
                 {loading ? (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <Skeleton className="h-[92px] w-full rounded-2xl" />
                         <Skeleton className="h-[92px] w-full rounded-2xl" />
                         <Skeleton className="h-[92px] w-full rounded-2xl" />
@@ -265,7 +272,7 @@ export default function OracleSearchPage() {
                       </AlertDescription>
                     </Alert>
                 ) : visibleEvents.length > 0 ? (
-                    <div>
+                    <div className="space-y-3">
                         {visibleEvents.map(event => <SignalCard key={event.id} event={event} />)}
                     </div>
                 ) : (

@@ -25,15 +25,15 @@ const faqs = [
     },
     {
         question: "What is the $TRUST token?",
-        answer: "The $TRUST token is the official utility token for the INTUITION BETs platform. It functions as the native currency of the Intuition chain, meaning all staking, rewards, and transaction fees (gas) are handled using $TRUST. This provides a seamless and integrated economic engine for the entire market."
+        answer: "The $TRUST token is the official utility token for the Intuition BETs platform. It functions as the native currency of the Intuition chain, meaning all staking, rewards, and transaction fees (gas) are handled using $TRUST. This provides a seamless and integrated economic engine for the entire market."
     },
     {
         question: "Who pays for gas fees and Oracle costs?",
-        answer: "As with all decentralized applications, users are responsible for the network gas fees required for their own on-chain transactions (e.g., placing a stake, claiming winnings). These fees are paid in $TRUST. The platform's operational costs, such as Oracle fees for objective outcome verification, are covered by the platform's treasury."
+        answer: "As with all decentralized applications, users are responsible for the network gas fees required for their own on-chain transactions (e.g., placing a bet, claiming winnings). These fees are paid in $TRUST. The platform's operational costs, such as Oracle fees for objective outcome verification, are covered by the platform's treasury."
     },
     {
         question: "How does the platform earn revenue?",
-        answer: "The platform's business model is transparent and self-sustaining. We collect a small 3% fee from the winnings of each Signal. This fee is automatically sent to a secure treasury wallet and is used to fund operational costs, security audits, and future development, ensuring the long-term health and decentralization of the ecosystem."
+        answer: "The platform's business model is transparent and self-sustaining. We collect a small 3% fee from the winnings of each event. This fee is automatically sent to a secure treasury wallet and is used to fund operational costs, security audits, and future development, ensuring the long-term health and decentralization of the ecosystem."
     },
     {
         question: "Where does the event data come from?",
@@ -41,7 +41,7 @@ const faqs = [
     },
     {
         question: "Where do my staked funds go?",
-        answer: "When you place a Stake, your $TRUST tokens are programmatically locked in a secure, audited smart contract, not held by the platform. This contract acts as an automated and impartial escrow. After a Signal concludes, it transparently and automatically distributes the entire pool to the winners according to the verifiable outcome."
+        answer: "When you place a bet, your $TRUST tokens are programmatically locked in a secure, audited smart contract, not held by the platform. This contract acts as an automated and impartial escrow. After an event concludes, it transparently and automatically distributes the entire pool to the winners according to the verifiable outcome."
     }
 ]
 
@@ -49,24 +49,24 @@ export default function HelpPage() {
   const { isAdmin } = useAdmin();
 
   return (
-    <div className="space-y-8 animate-slide-up">
+    <div className="space-y-8">
         <PageHeader
-            title="Help & FAQ"
-            description="Your guide to the INTUITION BETs prediction market."
+            title="Platform Manual & FAQ"
+            description="Your complete guide to mastering the Intuition BETs decentralized prediction market."
         />
 
-      <Card className="glass-panel">
+      <Card>
         <CardHeader>
-          <CardTitle>What is INTUITION BETs?</CardTitle>
+          <CardTitle>What is Intuition BETs?</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            INTUITION BETs is a premier, fully-decentralized prediction market that empowers users to capitalize on their real-world knowledge and foresight by betting on event outcomes with the official **$TRUST token**. Built on a foundation of immutable smart contracts and a secure backend, every stake, outcome, and payout is executed with maximum transparency, security, and efficiency.
+            Intuition BETs is a premier, fully-decentralized prediction market that empowers users to capitalize on their real-world knowledge and foresight by betting on event outcomes with the official **$TRUST token**. Built on a foundation of immutable smart contracts and a secure backend, every bet, outcome, and payout is executed with maximum transparency, security, and efficiency.
           </p>
         </CardContent>
       </Card>
 
-       <Card className="glass-panel">
+       <Card>
         <CardHeader>
           <CardTitle>How It Works: The Path to Winning</CardTitle>
           <CardDescription>A powerful, four-step process to capitalize on your insight.</CardDescription>
@@ -96,7 +96,7 @@ export default function HelpPage() {
                 </div>
                 <div>
                     <h3 className="font-semibold">3. The Winner's Pool</h3>
-                    <p className="text-sm text-muted-foreground">All stakes are locked in the Signal's immutable smart contract. Winners proportionally split the tokens from the losing side. A small 3% platform fee on winnings ensures operational longevity.</p>
+                    <p className="text-sm text-muted-foreground">All stakes are locked in the event's immutable smart contract. Winners proportionally split the tokens from the losing side. A small 3% platform fee on winnings ensures operational longevity.</p>
                 </div>
             </div>
              <div className="flex items-start gap-4">
@@ -105,14 +105,14 @@ export default function HelpPage() {
                 </div>
                 <div>
                     <h3 className="font-semibold">4. Automated Resolution & Payout</h3>
-                    <p className="text-sm text-muted-foreground">A decentralized Chainlink Oracle provides the definitive, real-world Signal outcome. If your prediction was correct, the "Claim Winnings" function becomes available for you to execute and collect your payout directly into your wallet.</p>
+                    <p className="text-sm text-muted-foreground">A decentralized Chainlink Oracle provides the definitive, real-world event outcome. If your prediction was correct, the "Claim Winnings" function becomes available for you to execute and collect your payout directly into your wallet.</p>
                 </div>
             </div>
         </CardContent>
       </Card>
       
       {isAdmin && (
-        <Card className="glass-panel">
+        <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><FileLock2 /> Understanding Addresses &amp; Keys</CardTitle>
               <CardDescription>A critical guide for secure platform administration.</CardDescription>
@@ -149,7 +149,7 @@ export default function HelpPage() {
         </Card>
       )}
 
-       <Card className="glass-panel">
+       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><HelpCircle /> Frequently Asked Questions</CardTitle>
         </CardHeader>

@@ -1,17 +1,35 @@
 
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useWallet } from '@/hooks/use-wallet';
 import { LandingPage } from '@/components/landing-page';
+import { Skeleton } from '@/components/ui/skeleton';
 import { GreetingCard } from '@/components/dashboard/greeting-card';
 import { CategoryCarousel } from '@/components/dashboard/category-carousel';
 import { EventList } from '@/components/event-list';
+import { useAuthGuard } from '@/hooks/use-auth-guard';
 import { EventFilterTabs } from '@/components/dashboard/event-filter-tabs';
 import { DashboardSearch } from '@/components/dashboard/dashboard-search';
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import type { EventStatus } from '@/lib/types';
 
+
+function DashboardLoading() {
+  return (
+    <div className="space-y-8">
+      <Skeleton className="h-64 w-full rounded-[2.5rem]" />
+      <div className="flex justify-center">
+        <Skeleton className="h-10 w-64 rounded-full" />
+      </div>
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <Skeleton className="w-full h-[340px] rounded-[2.5rem]" />
+        <Skeleton className="w-full h-[340px] rounded-[2.5rem]" />
+        <Skeleton className="w-full hidden md:block h-[340px] rounded-[2.5rem]" />
+      </div>
+    </div>
+  );
+}
 
 function Dashboard() {
   const searchParams = useSearchParams();
@@ -77,7 +95,12 @@ function Dashboard() {
 }
 
 export default function Page() {
+  const { isLoading: authLoading } = useAuthGuard();
   const { connected } = useWallet();
+
+  if (authLoading) {
+    return <DashboardLoading />;
+  }
 
   if (!connected) {
     return <LandingPage />;

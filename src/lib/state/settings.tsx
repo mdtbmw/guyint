@@ -9,8 +9,6 @@ import { useWallet } from '@/hooks/use-wallet';
 export const defaultSettings = {
   username: '',
   bio: '',
-  twitter: '',
-  website: '',
   notifications: {
     onBetPlaced: true,
     onEventResolved: true,

@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import { useRef, useEffect, useCallback, useMemo } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode.react';
 import { Download, Share2 } from 'lucide-react';
@@ -11,7 +10,6 @@ import { UserStats } from '@/lib/types';
 import { Logo } from '@/components/ui/logo';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { getRank } from '@/lib/ranks';
 
 interface UserIDCardProps {
     user: { name: string; address: string | undefined };
@@ -59,7 +57,6 @@ export function UserIDCard({ user, stats }: UserIDCardProps) {
     }, []);
 
     const trustScore = stats?.trustScore ?? 0;
-    const userRank = useMemo(() => getRank(trustScore), [trustScore]);
     const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/achievements` : '';
     
     const generateImage = useCallback(async (output: 'download' | 'share') => {
@@ -72,15 +69,15 @@ export function UserIDCard({ user, stats }: UserIDCardProps) {
             if (output === 'download') {
                 const dataUrl = await toPng(cardRef.current, { cacheBust: true });
                 const link = document.createElement('a');
-                link.download = 'INTUITION_BETs_ID.png';
+                link.download = 'Intuition_ID.png';
                 link.href = dataUrl;
                 link.click();
             } else if (output === 'share' && navigator.share) {
                 const blob = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
-                const file = new File([blob], 'INTUITION_BETs_ID.png', { type: 'image/png' });
+                const file = new File([blob], 'Intuition_ID.png', { type: 'image/png' });
                 const shareData = {
-                    title: 'My INTUITION BETs ID',
-                    text: `Check out my stats on INTUITION BETs! My Trust Score is ${trustScore.toFixed(1)}.`,
+                    title: 'My Intuition ID',
+                    text: `Check out my stats on Intuition BETs! My Trust Score is ${trustScore.toFixed(1)}.`,
                     files: [file]
                 };
 
@@ -123,12 +120,12 @@ export function UserIDCard({ user, stats }: UserIDCardProps) {
                                 <Logo/>
                             </div>
                             <div>
-                                <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">INTUITION BETs ID</p>
+                                <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Intuition ID</p>
                                 <p className="text-xs font-mono text-gold-500">INT-{(user.address || "0000").slice(2, 6).toUpperCase()}-X</p>
                             </div>
                         </div>
-                        <div className="px-3 py-1 rounded-full border border-primary/50 bg-primary/10 backdrop-blur-md">
-                            <span className="text-[10px] font-bold uppercase text-primary tracking-widest">{userRank.name} Tier</span>
+                        <div className="px-3 py-1 rounded-full border border-gold-500/50 bg-gold-500/10 backdrop-blur-md">
+                            <span className="text-[10px] font-bold uppercase text-gold-400 tracking-widest">Sigma Tier</span>
                         </div>
                     </div>
                     
@@ -142,7 +139,7 @@ export function UserIDCard({ user, stats }: UserIDCardProps) {
                             <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mb-1">Trust Score</p>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-4xl md:text-5xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-gold-300 to-gold-600">{trustScore.toFixed(1)}</span>
-                                <span className="text-sm text-zinc-500 font-bold">/ 150</span>
+                                <span className="text-sm text-zinc-500 font-bold">/ 100</span>
                             </div>
                         </div>
                         <div className="h-14 w-14 rounded-xl border-2 border-white/20 flex items-center justify-center p-1 bg-white/10">

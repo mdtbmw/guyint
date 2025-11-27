@@ -7,7 +7,6 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Loader2, Link as LinkIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useWallet } from "@/hooks/use-wallet";
 
 const getOutcomeBadge = (bet: PnLBet) => {
     switch (bet.outcome) {
@@ -33,10 +32,9 @@ interface BetCardProps {
 
 export function BetCard({ bet, onAction, actionLoading }: BetCardProps) {
     const router = useRouter();
-    const { chain } = useWallet();
 
     return (
-        <div className={cn("glass-panel rounded-2xl p-4 space-y-4", 
+        <div className={cn("bg-card rounded-2xl border p-4 space-y-4", 
             bet.outcome === 'Won' || bet.outcome === 'Claimed' ? "border-emerald-500/20" :
             bet.outcome === 'Lost' ? "border-rose-500/20" :
             "border-border"
@@ -53,12 +51,12 @@ export function BetCard({ bet, onAction, actionLoading }: BetCardProps) {
                 </div>
                  <div className="text-right">
                     <p className="text-muted-foreground text-xs uppercase font-bold tracking-wider">Stake</p>
-                    <p className="font-bold text-foreground">{bet.stakedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {chain?.nativeCurrency.symbol}</p>
+                    <p className="font-bold text-foreground">${bet.stakedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                  <div>
                     <p className="text-muted-foreground text-xs uppercase font-bold tracking-wider">PnL</p>
                     <p className={cn("font-bold", bet.pnl >= 0 ? 'text-emerald-500' : 'text-rose-500')}>
-                        {bet.pnl >= 0 ? '+' : ''}{bet.pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {chain?.nativeCurrency.symbol}
+                        {bet.pnl >= 0 ? '+' : ''}${bet.pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                 </div>
                  <div className="text-right">
@@ -68,7 +66,7 @@ export function BetCard({ bet, onAction, actionLoading }: BetCardProps) {
                         </Button>
                     ) : (
                          <Button size="sm" variant="ghost" onClick={() => router.push(`/event/${bet.eventId}`)}>
-                            View Signal <LinkIcon className="w-3 h-3 ml-2 text-muted-foreground" />
+                            View Event <LinkIcon className="w-3 h-3 ml-2 text-muted-foreground" />
                         </Button>
                     )}
                  </div>

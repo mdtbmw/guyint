@@ -9,7 +9,9 @@ import { useSettings } from '@/lib/state/settings';
 import { Logo } from '../ui/logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
-import { ArrowLeft, Menu, X, MoreVertical, Bell, Sun, Moon, LogOut } from 'lucide-react';
+import { ArrowLeft, Menu, X, MoreVertical, Bell, Sun, Moon } from 'lucide-react';
+import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { navLinks, NavLink } from '@/lib/nav-links';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAdmin } from '@/hooks/use-admin';
@@ -27,9 +29,7 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from 'next-themes';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { useHeaderState } from '@/lib/state/header';
-import { UserProfileStats } from '../profile/user-profile-stats';
-import { navLinks } from '@/lib/nav-links';
+
 
 const NON_ROOT_PATHS = ['/event', '/admin', '/create-event'];
 
@@ -118,57 +118,18 @@ const NotificationPanelContent = () => {
     );
 }
 
-const AccountModalContent = () => {
-    const { address, disconnect } = useWallet();
-    const { settings } = useSettings();
-    const username = settings.username || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "User");
-
-    return (
-        <div className="p-2">
-            <VisuallyHidden>
-              <DialogTitle>Account Details</DialogTitle>
-            </VisuallyHidden>
-             <div className="flex flex-col items-center text-center">
-                 <div className="relative w-36 h-36 shrink-0">
-                    <svg className="absolute inset-0" viewBox="0 0 120 120">
-                        <circle cx="60" cy="60" fill="none" r="56" stroke="hsl(var(--secondary))" strokeWidth="8"></circle>
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Avatar className="w-28 h-28 border-4 border-background">
-                            <AvatarImage src={`https://api.dicebear.com/9.x/pixel-art/svg?seed=${settings.username || address}`} alt="User Avatar" />
-                            <AvatarFallback>{username.slice(0,2) || '??'}</AvatarFallback>
-                        </Avatar>
-                    </div>
-                </div>
-                <h2 className="text-2xl font-bold font-display mt-4">{username}</h2>
-                <p className="text-sm text-muted-foreground font-mono">{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : ''}</p>
-            </div>
-            
-            <div className="my-6">
-                <UserProfileStats />
-            </div>
-
-            <button onClick={() => disconnect()} className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold hover:bg-destructive hover:text-white transition-colors active-press">
-                <LogOut className="w-4 h-4"/>
-                Disconnect
-            </button>
-        </div>
-    )
-}
-
 export function AppHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { open } = useWeb3Modal();
   const { settings } = useSettings();
-  const { address, disconnect } = useWallet();
+  const { address, connected } = useWallet();
 
   const { markAllAsRead, unreadCount } = useNotifications();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const isMobile = useIsMobile();
-  
-  const { title, subtitle } = useHeaderState();
-  const isInnerPage = pathname !== '/';
+  const { theme, setTheme } = useTheme();
 
 
   useEffect(() => {
@@ -179,7 +140,9 @@ export function AppHeader() {
       return () => clearTimeout(timer);
     }
   }, [isNotificationsOpen, markAllAsRead]);
-  
+
+  const isDeepPage = NON_ROOT_PATHS.some(p => pathname.startsWith(p));
+
   const notificationTrigger = (
     <DialogTrigger asChild>
       <button className="relative p-2 rounded-full bg-card hover:bg-accent">
@@ -191,20 +154,17 @@ export function AppHeader() {
     </DialogTrigger>
   );
 
-  if (isMobile === undefined) {
-    return null; 
+  if (isMobile === undefined && connected) {
+    return <header className="md:hidden h-20" />;
   }
-
 
   if (isMobile) {
       return (
         <>
-         <header className={cn(
-             "md:hidden flex items-center justify-between p-4 h-20 bg-background/80 backdrop-blur-xl sticky top-0 z-30 rounded-b-2xl border-b border-border"
-         )}>
+         <header className="md:hidden flex items-center justify-between p-4 h-20 border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-30 rounded-b-3xl">
             {/* Left Icon */}
             <div className="w-10">
-                {isInnerPage ? (
+                {isDeepPage ? (
                     <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => router.back()}>
                         <ArrowLeft className="w-5 h-5"/>
                     </Button>
@@ -215,20 +175,10 @@ export function AppHeader() {
                 )}
             </div>
 
-            {/* Centered Content */}
-            <div className="absolute left-1/2 -translate-x-1/2 text-center">
-              {isInnerPage && title ? (
-                <div>
-                    <h1 className="text-base font-bold text-foreground truncate max-w-[200px]">{title}</h1>
-                    {subtitle && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{subtitle}</p>}
-                </div>
-              ) : (
-                <Link href="/" className="flex items-center gap-3">
-                    <Logo className="h-8 w-8 text-foreground" />
-                </Link>
-              )}
-            </div>
-            
+            {/* Centered Logo */}
+            <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
+              <Logo className="h-8 w-8 text-foreground" />
+            </Link>
 
             {/* Right Icons */}
             <div className="flex items-center gap-2">
@@ -239,19 +189,12 @@ export function AppHeader() {
                     </DialogContent>
                 </Dialog>
 
-                 <Dialog>
-                    <DialogTrigger asChild>
-                         <button className="h-9 w-9 rounded-full p-0.5 cursor-pointer">
-                            <Avatar className="h-full w-full">
-                                <AvatarImage src={`https://api.dicebear.com/9.x/pixel-art/svg?seed=${settings.username || address}`} alt="User Avatar" />
-                                <AvatarFallback>{address?.slice(2,4) || '??'}</AvatarFallback>
-                            </Avatar>
-                        </button>
-                    </DialogTrigger>
-                    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md bg-card/80 backdrop-blur-xl rounded-[2.5rem]">
-                        <AccountModalContent />
-                    </DialogContent>
-                </Dialog>
+                <button className="h-9 w-9 rounded-full p-0.5 cursor-pointer" onClick={() => open({ view: 'Account' })}>
+                    <Avatar className="h-full w-full">
+                        <AvatarImage src={`https://api.dicebear.com/9.x/pixel-art/svg?seed=${settings.username || address}`} alt="User Avatar" />
+                        <AvatarFallback>{address?.slice(2,4) || '??'}</AvatarFallback>
+                    </Avatar>
+                </button>
             </div>
         </header>
         <MobileNavMenu isOpen={isMenuOpen} onOpenChange={setIsMenuOpen} />

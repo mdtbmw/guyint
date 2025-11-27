@@ -1,40 +1,63 @@
 
 'use client';
 
-import { useAccount, useBalance, useDisconnect, useSwitchChain, useWalletClient } from 'wagmi';
+import { useAccount, useBalance } from 'wagmi';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { useCallback, useEffect, useState } from 'react';
+import type { WalletClient } from 'viem';
 import { useIsMounted } from './use-is-mounted';
-import { activeChain } from '@/lib/chains';
+import { getWalletClient } from 'wagmi/actions';
+import { wagmiConfig } from '@/lib/wagmi';
 
 export function useWallet() {
   const { address, isConnected, isConnecting, chain } = useAccount();
-  const { open } = useWeb3Modal();
-  const { switchChain } = useSwitchChain();
-  const { disconnect } = useDisconnect();
   const isMounted = useIsMounted();
   
-  const { data: walletClient } = useWalletClient({ chainId: chain?.id });
-
   const { data: balanceData, isLoading: balanceLoading, refetch: fetchBalance } = useBalance({ 
     address,
   });
 
+  const { open } = useWeb3Modal();
+  
+  const [walletClient, setWalletClient] = useState<WalletClient | null>();
+
+  useEffect(() => {
+    const fetchWalletClient = async () => {
+        if (isConnected && chain) {
+            try {
+                const client = await getWalletClient(wagmiConfig, { chainId: chain.id });
+                setWalletClient(client);
+            } catch (error) {
+                console.error("Error getting wallet client:", error);
+                setWalletClient(null);
+            }
+        } else {
+            setWalletClient(null);
+        }
+    }
+    fetchWalletClient();
+  }, [isConnected, chain]);
+
+
+  const connectWallet = useCallback(() => {
+    open();
+  }, [open]);
+
   const balance = balanceData ? parseFloat(balanceData.formatted) : 0;
+
+  // Prevent hydration issues by ensuring we're on the client
   const connected = isMounted && isConnected;
-  const wrongNetwork = isMounted && isConnected && chain?.id !== activeChain.id;
 
   return {
-    address,
-    connected,
+    address: address,
+    connected: connected,
     isConnecting: isConnecting || !isMounted,
     chain,
     balance,
     balanceLoading,
     fetchBalance,
-    connectWallet: open,
-    disconnect,
-    walletClient,
-    wrongNetwork,
-    switchChain: () => switchChain({ chainId: activeChain.id }),
+    connectWallet,
+    open,
+    walletClient: walletClient,
   };
 }

@@ -384,7 +384,7 @@ export const IntuitionBettingAbi = [
         "type": "uint256"
       }
     ],
-    "name": "getEventData",
+    "name": "getEvent",
     "outputs": [
       {
         "components": [

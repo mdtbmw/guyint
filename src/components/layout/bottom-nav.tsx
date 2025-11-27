@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -34,7 +35,7 @@ export function BottomNav() {
   }, []);
 
   // Hide nav on specific deep-level pages for a more immersive experience
-  if (pathname.startsWith('/event/')) {
+  if (pathname.startsWith('/event/') || pathname.startsWith('/admin') || pathname.startsWith('/create-event')) {
     return null;
   }
   
@@ -56,7 +57,7 @@ export function BottomNav() {
 
   return (
     <div className={cn(
-        "lg:hidden fixed bottom-4 left-0 right-0 flex justify-center z-50 px-4 pointer-events-none transition-transform duration-300",
+        "md:hidden fixed bottom-4 left-0 right-0 flex justify-center z-50 px-4 pointer-events-none transition-transform duration-300",
         isHidden ? "translate-y-24" : "translate-y-0"
     )}>
         <nav className="dock-glass rounded-full h-16 w-full max-w-[360px] flex items-center justify-around px-2 pointer-events-auto">
@@ -70,12 +71,6 @@ export function BottomNav() {
                         </div>
                      )
                  }
-                 
-                 // Hide admin links from non-admins
-                 if (link.admin && !isAdmin) {
-                    return <div key={link.href} className="w-14 h-14" />; // Keep layout consistent
-                 }
-
 
                  const isActive = pathname === link.href;
                  return (

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useForm, Controller } from 'react-hook-form';
@@ -21,16 +20,11 @@ import { blockchainService } from '@/services/blockchain';
 import { UserStats } from '@/lib/types';
 import { Hex } from 'viem';
 import { Textarea } from '@/components/ui/textarea';
-import { AvatarSelectionDialog } from './profile/avatar-selection-dialog';
-import { getRank, calculateUserStats } from '@/lib/ranks';
 
 
-const DossierCard = ({ user, stats }: { user: { name: string; address: string | undefined, avatarSeed: string }, stats: UserStats | null }) => {
+const DossierCard = ({ user, stats }: { user: { name: string; address: string | undefined }, stats: UserStats | null }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/profile` : '';
-    const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
-    
-    const userRank = useMemo(() => getRank(stats?.trustScore ?? 0), [stats]);
     
     useEffect(() => {
         const card = cardRef.current;
@@ -70,54 +64,51 @@ const DossierCard = ({ user, stats }: { user: { name: string; address: string | 
     }, []);
 
     return (
-        <>
          <div className="perspective-[1000px]">
-            <div id="profile-card" ref={cardRef} className="card-3d relative w-full aspect-[0.8] sm:aspect-auto xl:aspect-[0.7] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-black/60 bg-card group border border-border">
+            <div id="profile-card" ref={cardRef} className="card-3d relative w-full aspect-[0.8] xl:aspect-[0.7] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-black/60 bg-card group border border-border">
                 <div className="absolute inset-0 bg-background/10 dark:bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] dark:opacity-20"></div>
                 <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-black/5 dark:to-black"></div>
                 <div className="absolute inset-0 bg-holographic bg-[length:200%_200%] opacity-10 dark:opacity-20 group-hover:opacity-40 mix-blend-overlay animate-shimmer pointer-events-none"></div>
 
-                <div className="relative z-10 p-6 md:p-8 flex flex-col items-center text-center h-full">
-                    <div className="w-full flex justify-between items-start mb-6 md:mb-8">
+                <div className="relative z-10 p-8 flex flex-col items-center text-center h-full">
+                    <div className="w-full flex justify-between items-start mb-8">
                         <div className="px-3 py-1 rounded-full border border-primary/30 bg-primary/10 backdrop-blur-md">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{userRank.name} Tier</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Sigma Tier</span>
                         </div>
                         <QrCode className="w-6 h-6 text-muted-foreground opacity-50" />
                     </div>
 
-                    <div className="relative w-24 h-24 md:w-32 md:h-32 mb-4 md:mb-6 group-hover:scale-105 transition-transform duration-500">
+                    <div className="relative w-32 h-32 mb-6 group-hover:scale-105 transition-transform duration-500">
                         <div className="absolute inset-0 bg-primary rounded-full blur-2xl opacity-20 animate-pulse-slow"></div>
                         <div className="relative w-full h-full rounded-full p-[3px] bg-gradient-to-br from-primary to-zinc-800">
-                            <img src={`https://api.dicebear.com/9.x/pixel-art/svg?seed=${user.avatarSeed}`} alt="Profile" className="rounded-full bg-background w-full h-full object-cover border-4 border-background"/>
+                            <img src={`https://api.dicebear.com/9.x/pixel-art/svg?seed=${user.name}`} alt="Profile" className="rounded-full bg-background w-full h-full object-cover border-4 border-background"/>
                         </div>
-                        <button onClick={() => setIsAvatarDialogOpen(true)} className="absolute bottom-0 right-0 w-8 h-8 bg-foreground text-background rounded-full flex items-center justify-center shadow-lg hover:bg-primary transition-colors border-2 border-background group/cam">
+                        <button className="absolute bottom-0 right-0 w-8 h-8 bg-foreground text-background rounded-full flex items-center justify-center shadow-lg hover:bg-primary transition-colors border-2 border-background group/cam">
                             <Camera className="w-4 h-4 group-hover/cam:rotate-12 transition-transform" />
                         </button>
                     </div>
 
-                    <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground tracking-tight mb-1">{user.name || 'Anonymous Signal'}</h1>
+                    <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-1">{user.name || 'Anonymous Signal'}</h1>
                     <p className="text-muted-foreground text-sm font-mono mb-6">{user.address ? `${user.address.slice(0, 6)}...${user.address.slice(-4)}` : '...'}</p>
 
                     <div className="grid grid-cols-2 gap-4 w-full mt-auto">
                         <div className="bg-background/40 p-4 rounded-2xl border border-border backdrop-blur-sm">
                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Trust Score</p>
-                            <p className="text-xl md:text-2xl font-display font-bold text-foreground">{stats?.trustScore.toFixed(1) ?? '0.0'}</p>
+                            <p className="text-2xl font-display font-bold text-foreground">{stats?.trustScore.toFixed(1) ?? '0.0'}</p>
                         </div>
                         <div className="bg-background/40 p-4 rounded-2xl border border-border backdrop-blur-sm">
                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Founded</p>
-                            <p className="text-lg md:text-xl font-display font-bold text-muted-foreground">INTUITION BETs</p>
+                            <p className="text-xl font-display font-bold text-muted-foreground">Intuition</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-         <AvatarSelectionDialog isOpen={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen} />
-        </>
     )
 }
 
 const TabButton = ({ label, active, onClick }: { label: string, active: boolean, onClick: () => void }) => (
-    <button onClick={onClick} className={cn("px-4 md:px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide transition-all whitespace-nowrap tab-btn", active ? 'bg-foreground text-background shadow-lg' : 'text-muted-foreground hover:text-foreground hover:bg-secondary')}>
+    <button onClick={onClick} className={cn("px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide transition-all whitespace-nowrap tab-btn", active ? 'bg-foreground text-background shadow-lg' : 'text-muted-foreground hover:text-foreground hover:bg-secondary')}>
         {label}
     </button>
 )
@@ -132,8 +123,6 @@ export function SettingsForm() {
   const [activeTab, setActiveTab] = useState('general');
   const [username, setUsername] = useState(settings.username);
   const [bio, setBio] = useState(settings.bio || '');
-  const [twitter, setTwitter] = useState(settings.twitter || '');
-  const [website, setWebsite] = useState(settings.website || '');
 
   const [stats, setStats] = useState<UserStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -155,8 +144,24 @@ export function SettingsForm() {
         }
 
         const userBetsOnAllEvents = await blockchainService.getMultipleUserBets(eventIds, address);
-        const newStats = calculateUserStats(allEvents, userBetsOnAllEvents);
-        setStats(newStats);
+        let wins = 0;
+        let losses = 0;
+        userBetsOnAllEvents.forEach((bet, index) => {
+            const event = allEvents[index];
+            if (event && (bet.yesAmount > 0n || bet.noAmount > 0n) && event.status === 'finished' && event.winningOutcome) {
+                const stakedOnYes = bet.yesAmount > 0n;
+                if ((stakedOnYes && event.winningOutcome === 'YES') || (!stakedOnYes && event.winningOutcome === 'NO')) {
+                    wins++;
+                } else {
+                    losses++;
+                }
+            }
+        });
+
+        const totalBets = wins + losses;
+        const accuracy = totalBets > 0 ? (wins / totalBets) * 100 : 0;
+        const trustScore = (wins * 5) - (losses * 2);
+        setStats({ wins, losses, totalBets, accuracy, trustScore });
 
     } catch (e) {
       console.error("Failed to fetch user stats for settings page:", e);
@@ -173,12 +178,10 @@ export function SettingsForm() {
   useEffect(() => {
     setUsername(settings.username);
     setBio(settings.bio || '');
-    setTwitter(settings.twitter || '');
-    setWebsite(settings.website || '');
   }, [settings]);
 
   const handleSaveGeneral = () => {
-    setSettings(prev => ({ ...prev, username, bio, twitter, website }));
+    setSettings(prev => ({ ...prev, username, bio }));
     toast({
         title: "Identity Synchronized",
         description: "Your general settings have been saved locally.",
@@ -209,25 +212,25 @@ export function SettingsForm() {
 
   return (
     <div className="flex flex-col xl:flex-row gap-8 items-start animate-slide-up">
-        <div className="w-full xl:w-2/5 space-y-6">
-            <DossierCard user={{ name: settings.username, address, avatarSeed: settings.username || address || 'default' }} stats={stats} />
+        <div className="w-full xl:w-1/3 space-y-6">
+            <DossierCard user={{ name: username, address }} stats={stats} />
              <div className="bg-card/60 dark:glass-panel p-6 rounded-[2rem] border backdrop-blur-md">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Signal Nodes</h3>
-                <div className="space-y-3">
-                    <a href={settings.twitter ? `https://twitter.com/${settings.twitter}`: '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500 hover:bg-blue-500 hover:text-white transition-all active-press group">
+                <div className="flex gap-4">
+                    <button className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500 hover:bg-blue-500 hover:text-white transition-all active-press group">
                         <Twitter className="w-4 h-4" />
-                        <span className="text-xs font-bold">{settings.twitter ? `@${settings.twitter}` : 'Not Set'}</span>
-                    </a>
-                    <a href={settings.website || '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-secondary border border-border text-muted-foreground hover:text-foreground transition-all active-press">
+                        <span className="text-xs font-bold">@mdtbmw</span>
+                    </button>
+                    <button className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-secondary border border-border text-muted-foreground hover:text-foreground transition-all active-press">
                         <LinkIcon className="w-4 h-4" />
-                        <span className="text-xs font-bold">{settings.website || 'Not Set'}</span>
-                    </a>
+                        <span className="text-xs font-bold">Link</span>
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div className="w-full xl:w-3/5 space-y-6">
-             <div className="p-1.5 rounded-2xl bg-card border flex flex-wrap gap-1 max-w-full">
+        <div className="w-full xl:w-2/3 space-y-6">
+             <div className="p-1.5 rounded-2xl bg-card border inline-flex gap-1 overflow-x-auto no-scrollbar max-w-full">
                 <TabButton label="General" active={activeTab === 'general'} onClick={() => setActiveTab('general')} />
                 <TabButton label="Security" active={activeTab === 'security'} onClick={() => setActiveTab('security')} />
                 <TabButton label="Notifications" active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} />
@@ -235,7 +238,7 @@ export function SettingsForm() {
             </div>
 
             {activeTab === 'general' && (
-                <div className="bg-card/60 backdrop-blur-xl border border-border rounded-[2.5rem] p-6 md:p-8 space-y-8 relative overflow-hidden">
+                <div className="bg-card/60 backdrop-blur-xl border border-border rounded-[2.5rem] p-8 space-y-8 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-border to-transparent"></div>
                     <div className="flex items-center justify-between border-b border-border pb-6">
                         <div>
@@ -279,24 +282,6 @@ export function SettingsForm() {
                             <div className="relative input-glow rounded-xl transition-all bg-background/50 dark:bg-black/40 border border-border group-focus-within:bg-background dark:group-focus-within:bg-black/60">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-primary rounded-l-xl opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
                                 <Textarea rows={3} value={bio} onChange={e => setBio(e.target.value)} maxLength={240} className="w-full bg-transparent border-none rounded-xl px-4 py-3 text-foreground focus:outline-none text-sm leading-relaxed resize-none font-mono" />
-                            </div>
-                        </div>
-                        <div className="space-y-2 group">
-                            <div className="flex justify-between">
-                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-focus-within:text-primary transition-colors">Twitter Handle</label>
-                            </div>
-                            <div className="relative input-glow rounded-xl transition-all bg-background/50 dark:bg-black/40 border border-border group-focus-within:bg-background dark:group-focus-within:bg-black/60">
-                                <div className="absolute top-0 left-3 h-full flex items-center text-muted-foreground group-focus-within:text-primary">@</div>
-                                <Input type="text" value={twitter} onChange={(e) => setTwitter(e.target.value)} className="w-full bg-transparent border-none rounded-xl pl-8 pr-4 py-3 text-foreground focus:outline-none font-medium font-mono" />
-                            </div>
-                        </div>
-                         <div className="space-y-2 group">
-                            <div className="flex justify-between">
-                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-focus-within:text-primary transition-colors">Website</label>
-                            </div>
-                            <div className="relative input-glow rounded-xl transition-all bg-background/50 dark:bg-black/40 border border-border group-focus-within:bg-background dark:group-focus-within:bg-black/60">
-                                 <LinkIcon className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
-                                <Input type="text" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://..." className="w-full bg-transparent border-none rounded-xl pl-9 pr-4 py-3 text-foreground focus:outline-none font-medium font-mono" />
                             </div>
                         </div>
                     </div>
@@ -371,4 +356,11 @@ export function SettingsForm() {
         </div>
     </div>
   );
+}
+
+// Add a placeholder `bio` to settings
+declare module '@/lib/state/settings' {
+    interface Settings {
+        bio?: string;
+    }
 }

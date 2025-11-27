@@ -1,4 +1,3 @@
-
 export interface NavLink {
     href: string;
     icon: string; // Icon name from lucide-react
@@ -10,14 +9,11 @@ export interface NavLink {
 
 export const navLinks: NavLink[] = [
     { href: '/', icon: 'Home', label: 'Home', group: 'main', mobile: true },
-    { href: '/search', icon: 'Search', label: 'Oracle Search', group: 'main', mobile: false },
-    { href: '/leaderboard', icon: 'Trophy', label: 'Rankings', group: 'main', mobile: true },
-    { href: '/achievements', icon: 'Award', label: 'Artifacts', group: 'main', mobile: true },
-    { href: '/my-ledger', icon: 'BookOpen', label: 'My Ledger', group: 'main', mobile: false },
-    { href: '/wallet', icon: 'Wallet', label: 'Wallet', group: 'support', mobile: false },
-    { href: '/admin', icon: 'Shield', label: 'Control Matrix', group: 'main', mobile: false, admin: true },
-    { href: '/settings', icon: 'UserCog', label: 'Identity', group: 'main', mobile: true },
+    { href: '/my-bets', icon: 'Crosshair', label: 'My Bets', group: 'main', mobile: true },
+    { href: '/search', icon: 'Search', label: 'Oracle', group: 'main', mobile: false },
+    { href: '/achievements', icon: 'Trophy', label: 'Merit', group: 'support', mobile: true },
+    { href: '/wallet', icon: 'Wallet', label: 'Wallet', group: 'support', mobile: true },
+    { href: '/admin', icon: 'Shield', label: 'Admin', group: 'main', mobile: false, admin: true },
+    { href: '/settings', icon: 'UserCog', label: 'Identity', group: 'support', mobile: false },
     { href: '/help', icon: 'HelpCircle', label: 'Help', group: 'support', mobile: false },
 ]
-
-    

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -251,12 +250,12 @@ export default function EventDetailPage() {
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
                 <div className="fixed bottom-0 left-0 right-0 p-2 bg-background/80 backdrop-blur-sm border-t border-border z-40">
-                     <Button className="w-full h-14 text-base font-bold rounded-2xl active-press" disabled={bettingHasEnded}>
+                     <Button className="w-full h-12 text-base font-bold" disabled={bettingHasEnded}>
                         {bettingHasEnded ? <><Lock className="w-4 h-4 mr-2"/>Betting Closed</> : 'Place Bet'}
                     </Button>
                 </div>
             </SheetTrigger>
-            <SheetContent side="bottom" className="p-0 h-auto rounded-t-2xl border-t-0 bg-secondary shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+            <SheetContent side="bottom" className="p-0 h-auto rounded-t-lg border-t-0 bg-secondary shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
                  <SheetHeader className="p-4 border-b">
                     <SheetTitle className="text-center">{event.question}</SheetTitle>
                 </SheetHeader>

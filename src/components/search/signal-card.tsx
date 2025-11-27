@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -10,7 +11,7 @@ export const SignalCard = ({ event }: { event: Event }) => {
     const yesPercentage = event.totalPool > 0 ? (event.outcomes.yes / event.totalPool) * 100 : 50;
 
     return (
-         <Link href={`/event/${event.id}`} className="block mb-3 last:mb-0">
+         <Link href={`/event/${event.id}`}>
             <div className="relative group active-press cursor-pointer">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-2xl opacity-20 group-hover:opacity-40 blur transition duration-300"></div>
                 <div className="relative p-5 rounded-2xl bg-card border border-border flex justify-between items-center">

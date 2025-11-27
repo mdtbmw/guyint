@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI flow to make event search more intelligent.
@@ -48,13 +47,9 @@ const expandSearchQueryFlow = ai.defineFlow(
     try {
         const {output} = await prompt(input);
         
-        if (!output) {
-            return [input];
-        }
-        
         // Ensure the original query is always first, even if the model forgets.
-        if (!output.includes(input)) {
-            return [input, ...output];
+        if (!output || !output.includes(input)) {
+            return [input, ...(output || [])];
         }
         return output;
     } catch (e) {

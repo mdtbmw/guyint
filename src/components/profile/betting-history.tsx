@@ -1,197 +1,289 @@
-
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { blockchainService } from '@/services/blockchain';
-import { useWallet } from '@/hooks/use-wallet';
-import type { Event, Bet, PnLBet } from '@/lib/types';
-import { formatEther, parseEther } from 'viem';
-import { Skeleton } from '../ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import type { Bet } from "@/lib/types";
+import { CheckCircle, XCircle, Clock, RotateCw, Check, Ticket, Loader2 } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { useWallet } from "@/hooks/use-wallet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
+import { blockchainService } from "@/services/blockchain";
+import { formatEther } from "viem";
+import { Button } from "@/components/ui/button";
 import { useNotifications } from '@/lib/state/notifications';
-import { BetCard } from './bet-card';
+
+const getOutcomeBadge = (outcome: Bet['outcome']) => {
+  switch (outcome) {
+    case "Won":
+      return (
+        <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/30">
+          <CheckCircle className="mr-1 h-3 w-3" /> Won
+        </Badge>
+      );
+    case "Claimed":
+       return (
+        <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/30 opacity-70">
+          <Check className="mr-1 h-3 w-3" /> Claimed
+        </Badge>
+      );
+    case "Lost":
+      return (
+        <Badge variant="secondary" className="text-muted-foreground">
+          <XCircle className="mr-1 h-3 w-3" /> Lost
+        </Badge>
+      );
+    case "Pending":
+      return (
+        <Badge variant="outline" className="border-border text-muted-foreground">
+          <Clock className="mr-1 h-3 w-3" /> Pending
+        </Badge>
+      );
+    case "Refunded":
+      return (
+        <Badge variant="secondary" className="text-muted-foreground opacity-70">
+          <RotateCw className="mr-1 h-3 w-3" /> Refunded
+        </Badge>
+      );
+      case "Refundable":
+      return (
+        <Badge variant="secondary" className="text-muted-foreground animate-pulse">
+          <RotateCw className="mr-1 h-3 w-3" /> Refundable
+        </Badge>
+      );
+  }
+};
+
 
 export function BettingHistory() {
-    const { address, walletClient } = useWallet();
-    const [events, setEvents] = useState<Event[]>([]);
-    const [bets, setBets] = useState<Bet[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [actionLoading, setActionLoading] = useState(false);
-    const [platformFeeBps, setPlatformFeeBps] = useState(0);
+  const [bets, setBets] = useState<Bet[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const { address, connected, fetchBalance, walletClient, chain } = useWallet();
+  const router = useRouter();
+  const { addNotification } = useNotifications();
 
-    const { addNotification } = useNotifications();
 
-    const fetchData = useCallback(async () => {
-        if (!address) return;
+  const fetchBets = useCallback(async () => {
+      if (!address || !connected) {
+        setLoading(false);
+        return;
+      }
+      try {
         setLoading(true);
-        setError(null);
-        try {
-            const [allEvents, fee] = await Promise.all([
-                blockchainService.getAllEvents(),
-                blockchainService.getPlatformFee()
-            ]);
-            setEvents(allEvents);
-            setPlatformFeeBps(fee);
 
-            const eventIdsAsBigInt = allEvents.map(e => BigInt(e.id));
-            if (eventIdsAsBigInt.length > 0) {
-                const betData = await blockchainService.getMultipleUserBets(eventIdsAsBigInt, address);
-                
-                const userBets: Bet[] = betData.map((onChainBet, index) => {
-                    const event = allEvents[index];
-                    const hasBet = onChainBet.yesAmount > 0n || onChainBet.noAmount > 0n;
-
-                    if (!hasBet || !event) return null;
-
-                    let outcome: Bet['outcome'] = "Pending";
-                    
-                    if (event.status === "finished") {
-                        const userWon = (onChainBet.yesAmount > 0n && event.winningOutcome === 'YES') || (onChainBet.noAmount > 0n && event.winningOutcome === 'NO');
-                        if (userWon) {
-                            outcome = onChainBet.claimed ? "Claimed" : "Won";
-                        } else {
-                            outcome = "Lost";
-                        }
-                    } else if (event.status === "canceled") {
-                        outcome = onChainBet.claimed ? "Refunded" : "Refundable";
-                    }
-
-                    return {
-                        id: `${event.id}-${address}`,
-                        eventId: event.id,
-                        eventQuestion: event.question,
-                        userBet: onChainBet.yesAmount > 0n ? 'YES' : 'NO',
-                        stakedAmount: Number(formatEther(onChainBet.yesAmount + onChainBet.noAmount)),
-                        date: event.bettingStopDate || new Date(),
-                        outcome,
-                    }
-                }).filter((b): b is Bet => b !== null);
-
-                setBets(userBets);
-            }
-
-        } catch (err: any) {
-            setError(err.message || "Failed to fetch betting history.");
-        } finally {
+        const allEvents = await blockchainService.getAllEvents();
+        
+        if (allEvents.length === 0) {
+            setBets([]);
             setLoading(false);
+            return;
         }
-    }, [address]);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        const eventIdsAsBigInt = allEvents.map(e => BigInt(e.id));
 
-    const handleAction = async (bet: Bet) => {
-        if (!walletClient || !address) return;
-        setActionLoading(true);
-        try {
-            const txHash = await blockchainService.claim(walletClient, address, BigInt(bet.eventId));
-            addNotification({
-                title: 'Claim Submitted',
-                description: 'Processing your claim...',
-                icon: 'Loader2',
-                type: 'onWinningsClaimed'
-            });
-            await blockchainService.waitForTransaction(txHash);
-            addNotification({
-                title: 'Success!',
-                description: `Your funds for "${bet.eventQuestion.slice(0,20)}..." have been claimed.`,
-                icon: 'CheckCircle',
-                variant: 'success',
-                type: 'onWinningsClaimed'
-            });
-            await fetchData(); // Refresh data
-        } catch (e: any) {
-             addNotification({
-                title: 'Claim Failed',
-                description: e.shortMessage || 'An unexpected error occurred.',
-                icon: 'AlertTriangle',
-                variant: 'destructive',
-                type: 'onWinningsClaimed'
-            });
-        } finally {
-            setActionLoading(false);
-        }
-    }
+        const betData = await blockchainService.getMultipleUserBets(
+          eventIdsAsBigInt,
+          address
+        );
 
-    const betsWithPnl = useMemo((): PnLBet[] => {
-        return bets.map(bet => {
-            const event = events.find(e => e.id === bet.eventId);
-            if (!event) return { ...bet, pnl: 0 };
-            
-            let pnl = -bet.stakedAmount;
+        const userBets: Bet[] = [];
 
-            if (bet.outcome === "Won" || bet.outcome === "Claimed") {
-                 const userStake = parseEther(String(bet.stakedAmount));
-                 const winningPool = event.winningOutcome === 'YES' ? parseEther(String(event.outcomes.yes)) : parseEther(String(event.outcomes.no));
-                 
-                 if (winningPool > 0n) {
-                    const totalPool = parseEther(String(event.totalPool));
-                    const fee = (totalPool * BigInt(platformFeeBps)) / 10000n;
-                    const distributablePool = totalPool - fee;
-                    const payout = (userStake * distributablePool) / winningPool;
-                    pnl = Number(formatEther(payout)) - bet.stakedAmount;
-                 } else {
-                     pnl = bet.stakedAmount; // Got their stake back
+        betData.forEach((onChainBet, index) => {
+          const totalBetAmount = onChainBet.yesAmount + onChainBet.noAmount;
+
+          if (totalBetAmount > 0n) {
+            const event = allEvents[index];
+            let outcome: Bet['outcome'] = 'Pending';
+            let winnings = 0;
+            const stakedOnYes = onChainBet.yesAmount > 0n;
+
+            if (event.status === 'canceled') {
+              outcome = onChainBet.claimed ? 'Refunded' : 'Refundable';
+              winnings = Number(formatEther(totalBetAmount));
+            } else if (event.status === 'finished' && event.winningOutcome) {
+              const userWon = (event.winningOutcome === 'YES' && stakedOnYes) || (event.winningOutcome === 'NO' && !stakedOnYes);
+              if (userWon) {
+                 outcome = onChainBet.claimed ? 'Claimed' : 'Won';
+                 if (event.totalPool > 0) {
+                   const userStake = Number(formatEther(stakedOnYes ? onChainBet.yesAmount : onChainBet.noAmount));
+                   const winningPool = event.winningOutcome === 'YES' ? event.outcomes.yes : event.outcomes.no;
+                   
+                   if (winningPool > 0) {
+                    winnings = (userStake * event.totalPool) / winningPool;
+                   } else {
+                    winnings = userStake; // If winning pool is zero, just return stake
+                   }
                  }
-            } else if (bet.outcome === 'Refunded' || bet.outcome === 'Refundable') {
-                pnl = bet.stakedAmount;
+              } else {
+                outcome = 'Lost';
+              }
             }
 
-            return { ...bet, pnl };
-        })
-    }, [bets, events, platformFeeBps]);
-    
-    const activeBets = useMemo(() => betsWithPnl.filter(b => b.outcome === 'Pending').sort((a,b) => b.date.getTime() - a.date.getTime()), [betsWithPnl]);
-    const historicalBets = useMemo(() => betsWithPnl.filter(b => b.outcome !== 'Pending').sort((a,b) => b.date.getTime() - a.date.getTime()), [betsWithPnl]);
+            userBets.push({
+              id: `${event.id}-${address}`,
+              eventId: event.id,
+              eventQuestion: event.question,
+              userBet: stakedOnYes ? 'YES' : 'NO',
+              stakedAmount: Number(formatEther(stakedOnYes ? onChainBet.yesAmount : onChainBet.noAmount)),
+              date: new Date(), // This is a placeholder; real bet date requires event indexing
+              outcome: outcome,
+              winnings: winnings,
+            });
+          }
+        });
+
+        setBets(userBets.sort((a,b) => b.date.getTime() - a.date.getTime()));
+
+      } catch (error: any) {
+         addNotification({
+            variant: "destructive",
+            title: "Error Loading Bets",
+            description: error.message || "Could not load your on-chain betting history.",
+            icon: 'AlertTriangle',
+            type: 'general'
+          });
+      } finally {
+        setLoading(false);
+      }
+    }, [address, connected, addNotification]);
 
 
-    const BetList = ({ betList }: { betList: PnLBet[] }) => {
-        if (loading) {
-            return (
-                <div className="space-y-4">
-                    <Skeleton className="h-32 w-full rounded-2xl" />
-                    <Skeleton className="h-32 w-full rounded-2xl" />
-                </div>
-            )
-        }
-        if (betList.length === 0) {
-            return <div className="text-center py-12 text-muted-foreground bg-card/60 glass-panel rounded-2xl">No signals in this category.</div>
-        }
+  useEffect(() => {
+    if (connected) {
+      fetchBets();
+    }
+  }, [connected, fetchBets]);
+
+  const handleAction = async (bet: Bet) => {
+    if (!address || !walletClient) return;
+    setActionLoading(prev => ({...prev, [bet.id]: true}));
+    try {
+        const txHash = await blockchainService.claim(walletClient, address, BigInt(bet.eventId));
+        addNotification({
+            title: "Transaction Submitted",
+            description: `Claiming funds... Tx: ${txHash.slice(0,10)}...`,
+            icon: 'Loader2',
+            type: 'onWinningsClaimed'
+        });
+        await blockchainService.waitForTransaction(txHash);
+        addNotification({
+            title: "Success!",
+            description: `Your funds have been sent to your wallet.`,
+            icon: 'CheckCircle',
+            href: '/wallet',
+            type: 'onWinningsClaimed'
+        });
+        await fetchBets();
+        await fetchBalance();
+    } catch (e: any) {
+        addNotification({
+            variant: "destructive",
+            title: `Failed to Claim`,
+            description: e.message || 'An unexpected error occurred.',
+            icon: 'AlertTriangle',
+            type: 'general'
+        });
+    } finally {
+      setActionLoading(prev => ({...prev, [bet.id]: false}));
+    }
+  };
+  
+    if (loading) {
         return (
-            <div className="space-y-4">
-                {betList.map(bet => (
-                    <BetCard key={bet.id} bet={bet} onAction={() => handleAction(bet)} actionLoading={actionLoading} />
-                ))}
+            <div className="border bg-card rounded-lg p-0">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-1/3">Event</TableHead>
+                            <TableHead>Your Bet</TableHead>
+                            <TableHead>Staked</TableHead>
+                            <TableHead>Outcome</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {Array.from({length: 5}).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                                <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                                <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-9 w-28 ml-auto" /></TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             </div>
         )
-    };
-    
-    if (error) {
-        return (
-            <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4"/>
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-            </Alert>
-        )
     }
 
-    return (
-        <Tabs defaultValue="active">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="active">Active Signals ({activeBets.length})</TabsTrigger>
-                <TabsTrigger value="historical">Historical Signals ({historicalBets.length})</TabsTrigger>
-            </TabsList>
-            <TabsContent value="active" className="mt-6">
-                <BetList betList={activeBets} />
-            </TabsContent>
-            <TabsContent value="historical" className="mt-6">
-                <BetList betList={historicalBets} />
-            </TabsContent>
-        </Tabs>
-    );
+  return (
+      <div className="border bg-card rounded-lg p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-1/3">Event</TableHead>
+              <TableHead>Your Bet</TableHead>
+              <TableHead>Staked</TableHead>
+              <TableHead>Outcome</TableHead>
+              <TableHead className="text-right">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {bets.length > 0 ? (
+              bets.map((bet) => (
+                <TableRow key={bet.id}>
+                  <TableCell className="font-medium max-w-sm truncate">{bet.eventQuestion}</TableCell>
+                  <TableCell>
+                     <Badge variant={bet.userBet === 'YES' ? 'default' : 'secondary'} className={cn(
+                        bet.userBet === 'YES' ? 'bg-primary/10 text-primary hover:bg-primary/20 border-primary/30' : 'text-muted-foreground'
+                    )}>
+                        {bet.userBet}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{bet.stakedAmount.toFixed(4)} {chain?.nativeCurrency.symbol}</TableCell>
+                  <TableCell>{getOutcomeBadge(bet.outcome)}</TableCell>
+                  <TableCell className="text-right">
+                    {(bet.outcome === "Won" || bet.outcome === "Refundable") && (
+                      <Button 
+                        size="sm"
+                        onClick={() => handleAction(bet)}
+                        disabled={actionLoading[bet.id]}
+                      >
+                         {actionLoading[bet.id] && <Loader2 className="w-4 h-4 mr-2 animate-spin"/>}
+                         Claim {bet.winnings?.toFixed(4)} {chain?.nativeCurrency.symbol}
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="h-64 text-center">
+                    <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                        <Ticket className="w-16 h-16 text-primary/20"/>
+                        <div className="text-center">
+                            <h3 className="font-bold text-lg text-foreground">Your Prediction Arena Awaits</h3>
+                            <p className="text-sm">Place your first bet to see your history here.</p>
+                        </div>
+                        <Button onClick={() => router.push('/')} variant="outline">
+                            Browse Events
+                        </Button>
+                    </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+  );
 }

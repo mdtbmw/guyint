@@ -50,7 +50,7 @@ export type PnLBet = Bet & {
 
 
 export type AdminRole = "Super Admin" | "Event Creator" | "Oracle";
-export type AdminAction = "Created Signal" | "Canceled Signal" | "Declared Outcome";
+export type AdminAction = "Created Event" | "Canceled Event" | "Declared Outcome";
 
 export type AdminLog = {
   id: string;
@@ -105,3 +105,6 @@ export interface UserStats {
     accuracy: number;
     trustScore: number;
 }
+
+// UserProfile is no longer needed as we source all data from on-chain
+

@@ -1,13 +1,17 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWallet } from '@/hooks/use-wallet';
 import { blockchainService } from '@/services/blockchain';
 import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, AlertTriangle, Star } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle, Wallet, Gift } from 'lucide-react';
 import { useNotifications } from '@/lib/state/notifications';
-import { formatEther, parseEther } from 'viem';
+import { formatEther } from 'viem';
+import { Bet } from '@/lib/types';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface ClaimableItem {
   eventId: string;
@@ -31,14 +35,9 @@ export function EarningsDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [allEvents, platformFeeBps] = await Promise.all([
-          blockchainService.getAllEvents(),
-          blockchainService.getPlatformFee()
-      ]);
-      
+      const allEvents = await blockchainService.getAllEvents();
       if (allEvents.length === 0) {
         setClaimable([]);
-        setLoading(false);
         return;
       }
       
@@ -58,41 +57,30 @@ export function EarningsDashboard() {
         let claimableAmount = 0;
         let type: 'Winnings' | 'Refund' | null = null;
         
+        // Handle refunds for canceled events
         if (event.status === 'canceled') {
           type = 'Refund';
           claimableAmount = Number(formatEther(totalBetAmount));
         }
+        // Handle winnings for finished events
         else if (event.status === 'finished' && event.winningOutcome) {
           const stakedOnYes = onChainBet.yesAmount > 0n;
           const userWon = (event.winningOutcome === 'YES' && stakedOnYes) || (event.winningOutcome === 'NO' && !stakedOnYes);
 
           if (userWon) {
             type = 'Winnings';
-            const userStake = stakedOnYes ? onChainBet.yesAmount : onChainBet.noAmount;
-            
-            // Correctly determine winning and total pools
+            const userStake = Number(formatEther(stakedOnYes ? onChainBet.yesAmount : onChainBet.noAmount));
             const winningPool = event.winningOutcome === 'YES' ? event.outcomes.yes : event.outcomes.no;
-            const totalPool = event.totalPool;
-
+            
             if (winningPool > 0) {
-              // Exact calculation must match smart contract:
-              // payout = (userStake * (totalPool - platformFee)) / winningPool
-              const totalPoolBigInt = parseEther(String(totalPool));
-              const winningPoolBigInt = parseEther(String(winningPool));
-              
-              const platformFee = (totalPoolBigInt * BigInt(platformFeeBps)) / 10000n;
-              const distributablePool = totalPoolBigInt - platformFee;
-
-              const payout = (userStake * distributablePool) / winningPoolBigInt;
-              claimableAmount = Number(formatEther(payout));
+              claimableAmount = (userStake * event.totalPool) / winningPool;
             } else {
-              // If winning pool is 0, user gets their stake back. This is an edge case.
-              claimableAmount = Number(formatEther(userStake));
+              claimableAmount = userStake; // Return of stake if winning pool is somehow 0
             }
           }
         }
         
-        if (type && claimableAmount > 0.00001) { // Add a small threshold to avoid dust
+        if (type && claimableAmount > 0) {
           claimableItems.push({
             eventId: event.id,
             eventQuestion: event.question,
@@ -125,7 +113,7 @@ export function EarningsDashboard() {
     setClaiming(true);
     addNotification({
       title: 'Starting Mass Claim',
-      description: `Attempting to claim from ${claimable.length} event(s). Please approve transactions.`,
+      description: `Attempting to claim from ${claimable.length} event(s). Please approve transactions in your wallet.`,
       icon: 'Loader2',
       type: 'general'
     });
@@ -133,6 +121,7 @@ export function EarningsDashboard() {
     let successCount = 0;
     let failCount = 0;
 
+    // Process claims sequentially to avoid nonce issues
     for (const item of claimable) {
       try {
         const txHash = await blockchainService.claim(walletClient, address, BigInt(item.eventId));
@@ -147,19 +136,19 @@ export function EarningsDashboard() {
     if (successCount > 0) {
       addNotification({
         title: 'Claims Processed',
-        description: `Successfully claimed from ${successCount} event(s).`,
+        description: `Successfully claimed from ${successCount} event(s). Your funds are in your wallet.`,
         icon: 'CheckCircle',
         variant: 'success',
         type: 'onWinningsClaimed'
       });
       fetchBalance();
-      fetchClaimableAssets();
+      fetchClaimableAssets(); // Refresh the list
     }
     
     if (failCount > 0) {
       addNotification({
         title: 'Some Claims Failed',
-        description: `Failed to claim from ${failCount} event(s). Check console for details.`,
+        description: `Failed to claim from ${failCount} event(s). Check the console for details.`,
         icon: 'AlertTriangle',
         variant: 'destructive',
         type: 'general'
@@ -168,26 +157,59 @@ export function EarningsDashboard() {
 
     setClaiming(false);
   };
-  
-  if (totalClaimable === 0 && !loading) return null;
 
   return (
-      <div className="glass-panel p-4 rounded-2xl border-l-4 border-primary/50 flex items-center justify-between gap-4 shadow-xl animate-slide-up">
-        <div className="flex items-center gap-3">
-            <Star className="w-6 h-6 text-primary animate-float" />
-            <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Claimable Rewards</p>
-                {loading ? <Skeleton className="h-6 w-32 mt-1" /> : (
-                    <p className="text-xl font-display font-bold text-foreground font-mono">
-                        {totalClaimable.toFixed(4)} {chain?.nativeCurrency.symbol}
-                    </p>
-                )}
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+            <Gift />
+            Claimable Earnings
+        </CardTitle>
+        <CardDescription>
+            Withdraw your winnings and refunds from resolved events directly to your wallet.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg bg-secondary p-6 text-center">
+            <p className="text-sm font-medium text-muted-foreground">Total Available to Withdraw</p>
+            {loading ? (
+                <Skeleton className="h-10 w-48 mx-auto mt-2" />
+            ) : (
+                <p className="text-4xl font-bold tracking-tight text-foreground mt-1">
+                    {totalClaimable.toFixed(4)} <span className="text-primary">{chain?.nativeCurrency.symbol}</span>
+                </p>
+            )}
         </div>
-        <Button onClick={handleClaimAll} disabled={claiming || loading || totalClaimable === 0} className="active-press px-4 py-2 rounded-xl text-black text-xs font-bold uppercase unclaimed-shimmer shadow-lg">
-            {claiming && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Claim All
+        
+        <Button
+            className="w-full h-12 text-base"
+            disabled={claiming || loading || totalClaimable === 0}
+            onClick={handleClaimAll}
+        >
+            {claiming ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wallet className="mr-2 h-5 w-5" />}
+            {claiming ? 'Processing Claims...' : 'Withdraw All Earnings'}
         </Button>
-    </div>
+        
+        {claimable.length > 0 && (
+            <div className="space-y-2 pt-4 border-t">
+                <h4 className="text-sm font-semibold text-muted-foreground px-1">Breakdown</h4>
+                <ScrollArea className="h-48">
+                    <div className="space-y-2 pr-4">
+                    {claimable.map(item => (
+                        <div key={item.eventId} className="flex items-center justify-between rounded-md p-3 bg-secondary/50">
+                            <div className="flex-1 overflow-hidden">
+                                <p className="text-sm font-medium text-foreground truncate">{item.eventQuestion}</p>
+                                <p className="text-xs text-muted-foreground">{item.type}</p>
+                            </div>
+                            <p className="text-sm font-bold text-primary pl-4">{item.amount.toFixed(4)}</p>
+                        </div>
+                    ))}
+                    </div>
+                </ScrollArea>
+            </div>
+        )}
+
+      </CardContent>
+    </Card>
   );
 }

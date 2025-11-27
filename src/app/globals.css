@@ -210,19 +210,4 @@
     .ledger-table td {
         @apply px-4 py-4 text-sm text-foreground font-medium border-b border-border font-mono;
     }
-
-    .podium-deco {
-      background: linear-gradient(to top, hsla(var(--primary) / 0.15), transparent 80%);
-      border-bottom: 2px solid hsla(var(--primary) / 0.5);
-    }
-
-    .ranking-table th {
-        @apply px-4 py-3 text-left text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-500 border-b border-white/5;
-    }
-    .ranking-table td {
-        @apply px-4 py-3 text-sm text-foreground font-medium border-b border-white/5 font-mono;
-    }
-
 }
-
-    
