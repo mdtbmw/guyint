@@ -11,10 +11,12 @@ import { cn } from '@/lib/utils';
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="font-inter w-full h-full relative flex">
+    <div className="font-inter w-full h-full relative flex flex-col md:flex-row">
       <BlockchainServiceNotifier />
 
+      {/* Sidebar for desktop, AppHeader for mobile */}
       <Sidebar />
+      <AppHeader />
 
       <main className="flex-1 overflow-y-auto relative no-scrollbar pb-28 md:pb-0 md:pl-24 transition-all duration-500">
         {children}
