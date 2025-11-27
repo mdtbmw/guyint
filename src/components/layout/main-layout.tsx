@@ -6,7 +6,7 @@ import { BottomNav } from './bottom-nav';
 import { BlockchainServiceNotifier } from './blockchain-service-notifier';
 import { AppHeader } from './app-header';
 import { useWallet } from '@/hooks/use-wallet';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -44,37 +44,39 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { connected, isConnecting } = useWallet();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const isMobile = useIsMobile();
 
-  // Show a loading state or null during initial render and connection checks
-  if (isMobile === undefined || isConnecting) {
-    return null; 
+  if (!isClient || isConnecting || isMobile === undefined) {
+    return null;
   }
 
-  // Anonymous user flow
   if (!connected) {
-      if (isMobile) {
-          return (
-              <div className="font-inter w-full h-dvh relative flex flex-col">
-                  <AppHeader />
-                  <main className="flex-1 overflow-y-auto relative no-scrollbar">
-                      <div className="p-4 sm:p-6 pb-28">
-                          {children}
-                      </div>
-                  </main>
-                  <BottomNav />
-              </div>
-          );
-      }
-      // Desktop anonymous users see the landing page which is self-contained.
+    if (isMobile) {
       return (
-          <main className="overflow-y-auto no-scrollbar">
+        <div className="font-inter w-full h-dvh relative flex flex-col">
+          <AppHeader />
+          <main className="flex-1 overflow-y-auto relative no-scrollbar">
+            <div className="p-4 sm:p-6 pb-28">
               {children}
+            </div>
           </main>
+          <BottomNav />
+        </div>
       );
+    }
+    return (
+      <main className="overflow-y-auto no-scrollbar">
+        {children}
+      </main>
+    );
   }
 
-  // Authenticated user flow
   return (
     <>
       <BlockchainServiceNotifier />
