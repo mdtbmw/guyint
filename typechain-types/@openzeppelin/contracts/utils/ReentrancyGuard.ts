@@ -10,10 +10,9 @@ import type {
   Listener,
 } from "ethers";
 import type {
-  TypedContractEvent,
-  TypedDeferredTopicFilter,
-  TypedEventLog,
-  TypedListener,
+  ContractEvent,
+  EventLog,
+  Listener as TypedListener,
 } from "../../../common";
 
 export interface ReentrancyGuardInterface extends Interface {}
@@ -24,40 +23,40 @@ export interface ReentrancyGuard extends BaseContract {
 
   interface: ReentrancyGuardInterface;
 
-  queryFilter<TCEvent extends TypedContractEvent>(
+  queryFilter<TCEvent extends ContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
-  queryFilter<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  ): Promise<Array<EventLog<TCEvent>>>;
+  queryFilter<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<EventLog<TCEvent>>>;
 
-  on<TCEvent extends TypedContractEvent>(
+  on<TCEvent extends ContractEvent>(
     event: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
-  on<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  on<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
 
-  once<TCEvent extends TypedContractEvent>(
+  once<TCEvent extends ContractEvent>(
     event: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
-  once<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
+  once<TCEvent extends ContractEvent>(
+    filter: TCEvent,
     listener: TypedListener<TCEvent>
   ): Promise<this>;
 
-  listeners<TCEvent extends TypedContractEvent>(
+  listeners<TCEvent extends ContractEvent>(
     event: TCEvent
   ): Promise<Array<TypedListener<TCEvent>>>;
   listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(
+  removeAllListeners<TCEvent extends ContractEvent>(
     event?: TCEvent
   ): Promise<this>;
 

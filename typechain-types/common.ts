@@ -4,13 +4,14 @@
 import type {
   EventFragment,
   FunctionFragment,
-  ContractTransactionResponse,
-  BaseContract,
   Result,
   Interface,
-  ContractTransaction,
-  ContractMethod,
   Listener,
+} from "ethers";
+import type {
+  ContractTransaction,
+  ContractTransactionResponse,
+  ContractMethod,
 } from "ethers";
 
 export type EventLog = {
@@ -24,29 +25,25 @@ export type EventLog = {
   address: string;
 };
 
-export interface TypedEventLog<T extends TypedEvent> extends EventLog {
-  args: T["args"];
+export interface Event<TArgs extends any[] = any[], TObject = any> {
+  readonly args: TArgs & TObject;
+  readonly eventName: string;
+  readonly signature: string;
+
+  log: EventLog;
+  removeListener: () => Promise<this>;
+  getTransaction: () => Promise<ContractTransactionResponse>;
+  getTransactionReceipt: () => Promise<import("ethers").TransactionReceipt | null>;
 }
 
-export type TypedListener<T extends TypedEvent> = (
-  ...listenerArg: [...T["args"], TypedEventLog<T>]
+export type Listener<T extends Event> = (
+  ...listenerArg: [...T["args"], T]
 ) => void;
 
-export type TypedEvent<
-  TArgsArray extends any[] = any[],
-  TArgsObject = any
-> = {
-  readonly name: string;
-  readonly signature: string;
-  readonly args: TArgsArray & TArgsObject;
+export type ContractEvent<T extends Event> = {
+  listeners<U extends T>(eventName?: U["eventName"]): Promise<Array<Listener<U>>>;
+  off<U extends T>(event: U, listener: Listener<U>): Promise<this>;
+  on<U extends T>(event: U, listener: Listener<U>): Promise<this>;
+  once<U extends T>(event: U, listener: Listener<U>): Promise<this>;
+  removeListener<U extends T>(event: U, listener: Listener<U>): Promise<this>;
 };
-
-export interface ContractEvent<
-  T extends TypedEvent,
-  TName extends string = string
-> {
-  (...args: T["args"]): string;
-  name: TName;
-  fragment: EventFragment;
-  getFragment(...args: T["args"]): EventFragment;
-}

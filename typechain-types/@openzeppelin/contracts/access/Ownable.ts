@@ -11,12 +11,10 @@ import type {
   AddressLike,
   ContractRunner,
   ContractMethod,
-  Listener,
 } from "ethers";
 import type {
-  TypedContractEvent,
-  TypedEventLog,
-  TypedListener,
+  Event,
+  Listener,
   ContractEvent,
 } from "../../../common";
 
@@ -55,9 +53,7 @@ export namespace OwnershipTransferredEvent {
     previousOwner: string;
     newOwner: string;
   }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Log = TypedEventLog<Event>;
+  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
 }
 
 export interface Ownable extends BaseContract {
@@ -70,34 +66,34 @@ export interface Ownable extends BaseContract {
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<EventLog<TCEvent>>>;
   queryFilter<TCEvent extends ContractEvent>(
     filter: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<EventLog<TCEvent>>>;
 
   on<TCEvent extends ContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
   on<TCEvent extends ContractEvent>(
     filter: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
 
   once<TCEvent extends ContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
   once<TCEvent extends ContractEvent>(
     filter: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
 
   listeners<TCEvent extends ContractEvent>(
     event: TCEvent
-  ): Promise<Array<TypedListener<TCEvent>>>;
+  ): Promise<Array<Listener<TCEvent>>>;
   listeners(eventName?: string): Promise<Array<Listener>>;
   removeAllListeners<TCEvent extends ContractEvent>(
     event?: TCEvent
@@ -119,28 +115,32 @@ export interface Ownable extends BaseContract {
 
   getFunction(
     nameOrSignature: "owner"
-  ): TypedContractMethod<[], [string], "view">;
+  ): ContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "renounceOwnership"
-  ): TypedContractMethod<[], [void], "nonpayable">;
+  ): ContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "transferOwnership"
-  ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
+  ): ContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
 
   getEvent(
     key: "OwnershipTransferred"
-  ): TypedContractEvent<
+  ): ContractEvent<
     OwnershipTransferredEvent.InputTuple,
     OwnershipTransferredEvent.OutputTuple,
     OwnershipTransferredEvent.OutputObject
   >;
 
   filters: {
-    "OwnershipTransferred(address,address)": TypedContractEvent<
+    "OwnershipTransferred(address,address)": ContractEvent<
       OwnershipTransferredEvent.InputTuple,
       OwnershipTransferredEvent.OutputTuple,
       OwnershipTransferredEvent.OutputObject
     >;
-    OwnershipTransferred: TypedContractEvent<
+    OwnershipTransferred: ContractEvent<
       OwnershipTransferredEvent.InputTuple,
-      OwnershipTransferredEvent.
+      OwnershipTransferredEvent.OutputTuple,
+      OwnershipTransferredEvent.OutputObject
+    >;
+  };
+}

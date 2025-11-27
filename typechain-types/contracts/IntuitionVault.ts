@@ -12,12 +12,10 @@ import type {
   AddressLike,
   ContractRunner,
   ContractMethod,
-  Listener,
 } from "ethers";
 import type {
-  TypedContractEvent,
-  TypedEventLog,
-  TypedListener,
+  Event,
+  Listener,
   ContractEvent,
 } from "../common";
 
@@ -90,9 +88,7 @@ export namespace DepositedEvent {
     user: string;
     amount: bigint;
   }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Log = TypedEventLog<Event>;
+  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
 }
 
 export namespace OwnershipTransferredEvent {
@@ -102,9 +98,7 @@ export namespace OwnershipTransferredEvent {
     previousOwner: string;
     newOwner: string;
   }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Log = TypedEventLog<Event>;
+  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
 }
 
 export namespace SweeperUpdatedEvent {
@@ -114,9 +108,7 @@ export namespace SweeperUpdatedEvent {
     sweeper: string;
     allowed: boolean;
   }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Log = TypedEventLog<Event>;
+  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
 }
 
 export namespace SweptEvent {
@@ -131,9 +123,7 @@ export namespace SweptEvent {
     to: string;
     amount: bigint;
   }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Log = TypedEventLog<Event>;
+  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
 }
 
 export namespace WithdrawnEvent {
@@ -143,9 +133,7 @@ export namespace WithdrawnEvent {
     user: string;
     amount: bigint;
   }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Log = TypedEventLog<Event>;
+  export type Event = Event<InputTuple, OutputTuple, OutputObject>;
 }
 
 export interface IntuitionVault extends BaseContract {
@@ -158,187 +146,190 @@ export interface IntuitionVault extends BaseContract {
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<any>>;
   queryFilter<TCEvent extends ContractEvent>(
     filter: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<any>>;
 
   on<TCEvent extends ContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
   on<TCEvent extends ContractEvent>(
     filter: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
 
   once<TCEvent extends ContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
   once<TCEvent extends ContractEvent>(
     filter: TCEvent,
-    listener: TypedListener<TCEvent>
+    listener: Listener<TCEvent>
   ): Promise<this>;
 
   listeners<TCEvent extends ContractEvent>(
     event: TCEvent
-  ): Promise<Array<TypedListener<TCEvent>>>;
+  ): Promise<Array<Listener<TCEvent>>>;
   listeners(eventName?: string): Promise<Array<Listener>>;
   removeAllListeners<TCEvent extends ContractEvent>(
     event?: TCEvent
   ): Promise<this>;
 
-  balances: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
+  balances: ContractMethod<[arg0: AddressLike], [bigint], "view">;
 
-  deposit: TypedContractMethod<[], [void], "payable">;
+  deposit: ContractMethod<[], [void], "payable">;
 
-  isSweeper: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+  isSweeper: ContractMethod<[arg0: AddressLike], [boolean], "view">;
 
-  owner: TypedContractMethod<[], [string], "view">;
+  owner: ContractMethod<[], [string], "view">;
 
-  setSweeper: TypedContractMethod<
+  setSweeper: ContractMethod<
     [sweeper: AddressLike, allowed: boolean],
     [void],
     "nonpayable"
   >;
 
-  sweepTo: TypedContractMethod<
+  sweepTo: ContractMethod<
     [to: AddressLike, amount: BigNumberish],
     [void],
     "nonpayable"
   >;
 
-  transferOwnership: TypedContractMethod<
+  transferOwnership: ContractMethod<
     [newOwner: AddressLike],
     [void],
     "nonpayable"
   >;
 
-  withdraw: TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
+  withdraw: ContractMethod<[amount: BigNumberish], [void], "nonpayable">;
 
   getFunction(
     nameOrSignature: "balances"
-  ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
+  ): ContractMethod<[arg0: AddressLike], [bigint], "view">;
   getFunction(
     nameOrSignature: "deposit"
-  ): TypedContractMethod<[], [void], "payable">;
+  ): ContractMethod<[], [void], "payable">;
   getFunction(
     nameOrSignature: "isSweeper"
-  ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+  ): ContractMethod<[arg0: AddressLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "owner"
-  ): TypedContractMethod<[], [string], "view">;
+  ): ContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "setSweeper"
-  ): TypedContractMethod<
+  ): ContractMethod<
     [sweeper: AddressLike, allowed: boolean],
     [void],
     "nonpayable"
   >;
   getFunction(
     nameOrSignature: "sweepTo"
-  ): TypedContractMethod<
+  ): ContractMethod<
     [to: AddressLike, amount: BigNumberish],
     [void],
     "nonpayable"
   >;
   getFunction(
     nameOrSignature: "transferOwnership"
-  ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
+  ): ContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "withdraw"
-  ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
+  ): ContractMethod<[amount: BigNumberish], [void], "nonpayable">;
 
   getEvent(
     key: "Deposited"
-  ): TypedContractEvent<
+  ): ContractEvent<
     DepositedEvent.InputTuple,
     DepositedEvent.OutputTuple,
     DepositedEvent.OutputObject
   >;
   getEvent(
     key: "OwnershipTransferred"
-  ): TypedContractEvent<
+  ): ContractEvent<
     OwnershipTransferredEvent.InputTuple,
     OwnershipTransferredEvent.OutputTuple,
     OwnershipTransferredEvent.OutputObject
   >;
   getEvent(
     key: "SweeperUpdated"
-  ): TypedContractEvent<
+  ): ContractEvent<
     SweeperUpdatedEvent.InputTuple,
     SweeperUpdatedEvent.OutputTuple,
     SweeperUpdatedEvent.OutputObject
   >;
   getEvent(
     key: "Swept"
-  ): TypedContractEvent<
+  ): ContractEvent<
     SweptEvent.InputTuple,
     SweptEvent.OutputTuple,
     SweptEvent.OutputObject
   >;
   getEvent(
     key: "Withdrawn"
-  ): TypedContractEvent<
+  ): ContractEvent<
     WithdrawnEvent.InputTuple,
     WithdrawnEvent.OutputTuple,
     WithdrawnEvent.OutputObject
   >;
 
   filters: {
-    "Deposited(address,uint256)": TypedContractEvent<
+    "Deposited(address,uint256)": ContractEvent<
       DepositedEvent.InputTuple,
       DepositedEvent.OutputTuple,
       DepositedEvent.OutputObject
     >;
-    Deposited: TypedContractEvent<
+    Deposited: ContractEvent<
       DepositedEvent.InputTuple,
       DepositedEvent.OutputTuple,
       DepositedEvent.OutputObject
     >;
 
-    "OwnershipTransferred(address,address)": TypedContractEvent<
+    "OwnershipTransferred(address,address)": ContractEvent<
       OwnershipTransferredEvent.InputTuple,
       OwnershipTransferredEvent.OutputTuple,
       OwnershipTransferredEvent.OutputObject
     >;
-    OwnershipTransferred: TypedContractEvent<
+    OwnershipTransferred: ContractEvent<
       OwnershipTransferredEvent.InputTuple,
       OwnershipTransferredEvent.OutputTuple,
       OwnershipTransferredEvent.OutputObject
     >;
 
-    "SweeperUpdated(address,bool)": TypedContractEvent<
+    "SweeperUpdated(address,bool)": ContractEvent<
       SweeperUpdatedEvent.InputTuple,
       SweeperUpdatedEvent.OutputTuple,
       SweeperUpdatedEvent.OutputObject
     >;
-    SweeperUpdated: TypedContractEvent<
+    SweeperUpdated: ContractEvent<
       SweeperUpdatedEvent.InputTuple,
       SweeperUpdatedEvent.OutputTuple,
       SweeperUpdatedEvent.OutputObject
     >;
 
-    "Swept(address,address,uint256)": TypedContractEvent<
+    "Swept(address,address,uint256)": ContractEvent<
       SweptEvent.InputTuple,
       SweptEvent.OutputTuple,
       SweptEvent.OutputObject
     >;
-    Swept: TypedContractEvent<
+    Swept: ContractEvent<
       SweptEvent.InputTuple,
       SweptEvent.OutputTuple,
       SweptEvent.OutputObject
     >;
 
-    "Withdrawn(address,uint256)": TypedContractEvent<
+    "Withdrawn(address,uint256)": ContractEvent<
       WithdrawnEvent.InputTuple,
       WithdrawnEvent.OutputTuple,
       WithdrawnEvent.OutputObject
     >;
-    Withdrawn: TypedContractEvent<
+    Withdrawn: ContractEvent<
       WithdrawnEvent.InputTuple,
       WithdrawnEvent.OutputTuple,
-      WithdrawnEvent.
+      WithdrawnEvent.OutputObject
+    >;
+  };
+}
