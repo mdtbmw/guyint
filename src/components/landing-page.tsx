@@ -97,7 +97,7 @@ export function LandingPage() {
                         <a href="#community" className="px-5 py-2.5 rounded-full text-xs font-medium hover:bg-white/10 hover:text-white transition-all">Trust</a>
                     </div>
                     <div className="flex items-center gap-3 pr-2">
-                        <button onClick={open} className="bg-white hover:bg-gold-400 text-black px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wide transition-all transform hover:scale-105 shadow-lg shadow-white/10 hover:shadow-gold-400/40">Connect</button>
+                        <button onClick={() => open()} className="bg-white hover:bg-gold-400 text-black px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wide transition-all transform hover:scale-105 shadow-lg shadow-white/10 hover:shadow-gold-400/40">Connect</button>
                         <button onClick={toggleMenu} className="md:hidden w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-colors"><DynamicIcon name="Menu" className="w-5 h-5" /></button>
                     </div>
                 </nav>
@@ -141,7 +141,7 @@ export function LandingPage() {
                         </Reveal>
                         <Reveal delay={300}>
                             <div className="flex flex-wrap gap-4">
-                                <button onClick={open} className="group relative px-10 py-5 bg-gold-500 text-black font-bold text-sm tracking-wide uppercase overflow-hidden rounded-full shadow-xl shadow-gold-500/20 hover:shadow-gold-500/40 transition-all transform hover:-translate-y-1">
+                                <button onClick={() => open()} className="group relative px-10 py-5 bg-gold-500 text-black font-bold text-sm tracking-wide uppercase overflow-hidden rounded-full shadow-xl shadow-gold-500/20 hover:shadow-gold-500/40 transition-all transform hover:-translate-y-1">
                                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                                     <span className="relative z-10 flex items-center gap-2">Accept the Challenge <DynamicIcon name="ArrowRight" className="w-4 h-4 transition-transform group-hover:translate-x-1" /></span>
                                 </button>
