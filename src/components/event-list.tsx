@@ -1,14 +1,18 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Event, EventStatus } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EventCard } from "@/components/event-card";
+import { EventCard, SuggestMarketCard } from "@/components/event-card";
 import { blockchainService } from "@/services/blockchain";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
+import { expandSearchQuery } from "@/ai/flows/expand-search-query";
+import { useSearchParams } from "next/navigation";
+import { useAdmin } from "@/hooks/use-admin";
+
+const ITEMS_PER_PAGE = 5; // 5 because SuggestMarketCard takes 1 slot in a 3-col grid
 
 interface EventListProps {
     category?: string | 'All';
@@ -21,50 +25,71 @@ export function EventList({ category, status, searchTerm, isUpcoming }: EventLis
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [expandedSearchTerms, setExpandedSearchTerms] = useState<string[]>([]);
     
-    const fetchEvents = useCallback(async () => {
+    const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+
+    const searchParams = useSearchParams();
+    const { isAdmin } = useAdmin();
+
+    const fetchEvents = async () => {
         setLoading(true);
         setError(null);
         try {
             const allEvents = await blockchainService.getAllEvents();
             setEvents(allEvents);
         } catch (error: any) {
-            console.error("Failed to fetch events from blockchain:", error);
-            setError(error.message || "An unexpected error occurred while fetching events. The blockchain may be unavailable.");
+            console.error("Failed to fetch events:", error);
+            setError("Could not load event data from the blockchain. The network may be congested or the service unavailable.");
         } finally {
             setLoading(false);
         }
-    }, []);
+    };
 
     useEffect(() => {
         fetchEvents();
-    }, [fetchEvents]);
+    }, [searchParams.toString()]);
+    
+    // Reset visible count when filters change
+    useEffect(() => {
+        setVisibleCount(ITEMS_PER_PAGE);
+    }, [category, status, searchTerm, isUpcoming]);
+
+    useEffect(() => {
+        const getExpandedTerms = async () => {
+            if (searchTerm && searchTerm.trim().length > 2) {
+                try {
+                    const terms = await expandSearchQuery(searchTerm);
+                    setExpandedSearchTerms(terms);
+                } catch (e) {
+                    console.error("AI search expansion failed, falling back to basic search.", e);
+                    setExpandedSearchTerms([searchTerm]);
+                }
+            } else {
+                setExpandedSearchTerms([]);
+            }
+        };
+        getExpandedTerms();
+    }, [searchTerm]);
 
 
     const filteredEvents = useMemo(() => {
+        if (!events) return [];
         let processedEvents = [...events];
         
         const now = new Date();
 
-        // Primary status filter
-        if (status) {
+        if (isUpcoming) {
+            processedEvents = processedEvents.filter(event => event.bettingStopDate && new Date(event.bettingStopDate) > now)
+                                .sort((a,b) => (a.bettingStopDate?.getTime() || 0) - (b.bettingStopDate?.getTime() || 0));
+        } else if (status) {
             const statusArray = Array.isArray(status) ? status : [status];
             processedEvents = processedEvents.filter(event => statusArray.includes(event.status));
-        }
-
-        // Secondary 'upcoming' filter for open events
-        if (status === 'open') {
-          if (isUpcoming) {
-              // Show only events that haven't started yet (hypothetical future feature, for now endDate is our marker)
-              // This logic could be tied to a `startDate` if the contract supported it.
-              // For now, we assume "upcoming" might mean just sorting differently or a special tag.
-              // Let's filter to show open events whose end date is further in the future.
-              // This is a placeholder for a more robust "upcoming" logic.
-              processedEvents = processedEvents.filter(event => new Date(event.endDate) > now);
-          } else {
-              // Live events are open and not considered upcoming
-              processedEvents = processedEvents.filter(event => new Date(event.endDate) > now);
-          }
+            
+            // For 'open' status, also ensure betting has not ended
+            if (status === 'open') {
+                 processedEvents = processedEvents.filter(event => (!event.bettingStopDate || new Date(event.bettingStopDate) > now));
+            }
         }
         
         if (category && category !== 'All') {
@@ -72,22 +97,40 @@ export function EventList({ category, status, searchTerm, isUpcoming }: EventLis
         }
 
         if (searchTerm && searchTerm.trim() !== '') {
-            const lowercasedTerm = searchTerm.toLowerCase();
-            processedEvents = processedEvents.filter(event => 
-                event.question.toLowerCase().includes(lowercasedTerm)
-            );
+             if (expandedSearchTerms.length > 0) {
+                processedEvents = processedEvents.filter(event => {
+                    const question = event.question.toLowerCase();
+                    return expandedSearchTerms.some(term => question.includes(term.toLowerCase()));
+                });
+             } else {
+                // Fallback for when AI expansion hasn't completed or failed
+                 processedEvents = processedEvents.filter(event => event.question.toLowerCase().includes(searchTerm.toLowerCase()));
+             }
         }
         
-        return processedEvents.sort((a,b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime());
-    }, [events, category, status, searchTerm, isUpcoming]);
+        if (!isUpcoming) {
+            // Default sort by end date, newest first
+            return processedEvents.sort((a,b) => (b.bettingStopDate?.getTime() || 0) - (a.bettingStopDate?.getTime() || 0));
+        }
+
+        return processedEvents;
+
+    }, [events, category, status, searchTerm, isUpcoming, expandedSearchTerms]);
+
+    const handleLoadMore = () => {
+        setVisibleCount(prevCount => prevCount + ITEMS_PER_PAGE);
+    };
+    
+    const visibleEvents = useMemo(() => filteredEvents.slice(0, visibleCount), [filteredEvents, visibleCount]);
+    const canLoadMore = visibleCount < filteredEvents.length;
 
 
     if (loading) {
         return (
             <>
-                <Skeleton className="h-[420px] w-full rounded-lg" />
-                <Skeleton className="h-[420px] w-full rounded-lg" />
-                <Skeleton className="h-[420px] w-full rounded-lg" />
+                <Skeleton className="h-[340px] w-full rounded-[2.5rem]" />
+                <Skeleton className="h-[340px] w-full rounded-[2.5rem]" />
+                <Skeleton className="h-[340px] w-full rounded-[2.5rem]" />
             </>
         );
     }
@@ -99,7 +142,7 @@ export function EventList({ category, status, searchTerm, isUpcoming }: EventLis
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Network Error</AlertTitle>
                     <AlertDescription>
-                        {error}
+                        <p>{error}</p>
                          <Button onClick={fetchEvents} className="mt-4 w-full">
                             <RefreshCw className="w-4 h-4 mr-2"/>
                             Try Again
@@ -112,22 +155,36 @@ export function EventList({ category, status, searchTerm, isUpcoming }: EventLis
     
     if (filteredEvents.length === 0) {
         return (
-            <div className="md:col-span-2 xl:col-span-3 text-center py-12 text-white/60 bg-card rounded-lg">
-                <p className="font-semibold">No Events Found</p>
-                <p className="text-sm">There are no events matching your criteria.</p>
-                 <Button onClick={fetchEvents} className="mt-4">
+            <>
+            <div className="md:col-span-2 xl:col-span-3 text-center py-12 text-muted-foreground bg-card rounded-lg">
+                <p className="font-semibold text-lg">No Events Found</p>
+                <p className="text-sm">There are no events matching your current criteria.</p>
+                 <Button onClick={fetchEvents} className="mt-4" variant="outline">
                     <RefreshCw className="w-4 h-4 mr-2"/>
                     Fetch Again
                 </Button>
             </div>
+            {isAdmin && <SuggestMarketCard />}
+            </>
         )
     }
 
     return (
         <>
-            {filteredEvents.map((event) => (
+            {visibleEvents.map((event) => (
                 <EventCard key={event.id} event={{...event, id: event.id as string}} />
             ))}
+            {/* Always show suggest card if there's space and user is admin */}
+            {isAdmin && visibleEvents.length < (ITEMS_PER_PAGE + 1) && <SuggestMarketCard />}
+            
+            {canLoadMore && (
+                <div className="md:col-span-2 xl:col-span-3 text-center">
+                    <Button onClick={handleLoadMore} variant="outline" className="w-full max-w-sm">
+                        <ChevronDown className="w-4 h-4 mr-2" />
+                        Load More Signals
+                    </Button>
+                </div>
+            )}
         </>
     );
 }

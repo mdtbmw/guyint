@@ -1,6 +1,5 @@
 
-import { Timestamp } from "firebase/firestore";
-import { Hex } from "viem";
+import type { Hex } from "viem";
 
 export type UserTier = "Rookie" | "Analyst" | "Intuitive" | "Oracle";
 
@@ -16,7 +15,9 @@ export type BetOutcome = "YES" | "NO";
 export type Event = {
   id: string;
   question: string;
+  description?: string; // Optional description for more context
   category: string;
+  imageUrl?: string; // Optional image URL
   status: EventStatus;
   outcomes: {
     yes: number;
@@ -24,7 +25,9 @@ export type Event = {
   };
   totalPool: number;
   participants: Hex[];
-  endDate: Date;
+  startDate: Date | null;
+  bettingStopDate: Date | null;
+  resolutionDate: Date | null;
   winningOutcome?: BetOutcome;
   minStake: number;
   maxStake: number;
@@ -41,8 +44,13 @@ export type Bet = {
   winnings?: number;
 };
 
+export type PnLBet = Bet & {
+  pnl: number;
+};
+
+
 export type AdminRole = "Super Admin" | "Event Creator" | "Oracle";
-export type AdminAction = "Created Event" | "Canceled Event" | "Declared Outcome";
+export type AdminAction = "Created Signal" | "Canceled Signal" | "Declared Outcome";
 
 export type AdminLog = {
   id: string;
@@ -67,16 +75,33 @@ export type LeaderboardUser = {
 export type Achievement = {
   id: string;
   name: string;
+  description: string;
   icon: string;
+  image: string;
+  criteria: (stats: UserStats) => boolean;
+  progress: (stats: UserStats) => number;
+  goal: (stats: UserStats | null) => number;
 }
 
-export type Notification = {
+export type NotificationVariant = "default" | "success" | "destructive";
+export type NotificationCategory = 'onBetPlaced' | 'onEventResolved' | 'onWinningsClaimed';
+
+export type NotificationType = {
   id: string;
   title: string;
   description: string;
   timestamp: Date;
-  icon: React.ReactNode;
+  icon: string; // Lucide icon name
   read: boolean;
+  href?: string;
+  variant?: NotificationVariant;
+  type: NotificationCategory | 'general';
 };
 
-// UserProfile is no longer needed as we source all data from on-chain
+export interface UserStats {
+    wins: number;
+    losses: number;
+    totalBets: number;
+    accuracy: number;
+    trustScore: number;
+}

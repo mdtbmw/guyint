@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -12,24 +13,78 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Event } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Lock, Ban } from "lucide-react";
+import { CheckCircle, Lock, Ban, CircleDotDashed, Trash2, Edit, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DeclareOutcomeDialog, CancelEventDialog } from "./admin-action-dialogs";
+import { useRouter } from "next/navigation";
+import { useWallet } from "@/hooks/use-wallet";
+import { Card, CardContent, CardFooter, CardHeader } from "../ui/card";
+import { cn } from "@/lib/utils";
+
+const ITEMS_PER_PAGE = 10;
 
 const getStatusBadge = (status: Event['status']) => {
   switch (status) {
     case "open":
-      return <Badge className="bg-success/20 text-success border-success/30 gap-1"><div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>Live</Badge>;
+      return <Badge className="bg-primary/10 text-primary border-primary/20 gap-1.5"><CircleDotDashed className="w-3 h-3 animate-pulse"/>Live</Badge>;
     case "closed":
-      return <Badge className="bg-warning/20 text-warning border-warning/30 gap-1"><Lock className="w-3 h-3"/>Locked</Badge>;
+      return <Badge variant="secondary" className="gap-1.5"><Lock className="w-3 h-3"/>Locked</Badge>;
     case "finished":
-      return <Badge className="bg-blue-500/10 text-blue-300 border-blue-500/30 gap-1"><CheckCircle className="w-3 h-3"/>Resolved</Badge>;
+      return <Badge variant="secondary" className="opacity-70 gap-1.5"><CheckCircle className="w-3 h-3"/>Resolved</Badge>;
     case "canceled":
-      return <Badge variant="destructive" className="bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 border-rose-500/30 gap-1"><Ban className="w-3 h-3"/>Canceled</Badge>;
+      return <Badge variant="destructive" className="gap-1.5"><Ban className="w-3 h-3"/>Canceled</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
+};
+
+const EventCard = ({ event, onDeclare, onCancel }: { event: Event; onDeclare: (e: Event) => void; onCancel: (e: Event) => void; }) => {
+    const router = useRouter();
+    const { chain } = useWallet();
+
+    return (
+        <Card className="glass-panel" onClick={() => router.push(`/event/${event.id}`)}>
+            <CardHeader className="pb-4">
+                <div className="flex justify-between items-start">
+                    <p className="font-semibold text-foreground pr-4">{event.question}</p>
+                    {getStatusBadge(event.status)}
+                </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p className="text-muted-foreground text-xs uppercase font-bold tracking-wider">Pool</p>
+                    <p className="font-bold text-foreground">{event.totalPool.toFixed(4)} {chain?.nativeCurrency.symbol}</p>
+                </div>
+                 <div className="text-right">
+                    <p className="text-muted-foreground text-xs uppercase font-bold tracking-wider">Betting Locks</p>
+                    <p className="font-bold text-foreground">{event.bettingStopDate ? format(new Date(event.bettingStopDate), "PP") : 'N/A'}</p>
+                </div>
+            </CardContent>
+            <CardFooter className="flex gap-2">
+                 <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-full active-press"
+                    onClick={(e) => { e.stopPropagation(); onDeclare(event); }}
+                    disabled={event.status === 'finished' || event.status === 'canceled'}
+                    >
+                        <Edit className="w-4 h-4 mr-2"/>
+                        Declare Result
+                </Button>
+                <Button
+                    size="sm"
+                    variant="destructive"
+                     className="w-full active-press"
+                    onClick={(e) => { e.stopPropagation(); onCancel(event); }}
+                    disabled={event.status !== 'open'}
+                    >
+                        <Trash2 className="w-4 h-4 mr-2"/>
+                        Refund
+                </Button>
+            </CardFooter>
+        </Card>
+    );
 };
 
 interface AdminEventTableProps {
@@ -42,6 +97,9 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [isDeclareOpen, setDeclareOpen] = useState(false);
     const [isCancelOpen, setCancelOpen] = useState(false);
+    const router = useRouter();
+    const { chain, walletClient, address } = useWallet();
+    const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
     const handleDeclare = (event: Event) => {
         setSelectedEvent(event);
@@ -53,58 +111,90 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
         setCancelOpen(true);
     };
 
+    const handleLoadMore = () => {
+        setVisibleCount(prev => prev + ITEMS_PER_PAGE);
+    };
+    
+    const visibleEvents = useMemo(() => events?.slice(0, visibleCount) || [], [events, visibleCount]);
+    const canLoadMore = events ? visibleCount < events.length : false;
+
+
+  if (loading) {
+    return (
+        <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-40 w-full rounded-2xl" />
+            ))}
+        </div>
+    )
+  }
 
   return (
     <>
+    {/* Mobile Card View */}
+    <div className="grid md:hidden grid-cols-1 gap-4">
+        {visibleEvents && visibleEvents.length > 0 ? (
+            visibleEvents.map((event) => (
+                <EventCard key={event.id} event={event} onDeclare={handleDeclare} onCancel={handleCancel} />
+            ))
+        ) : (
+             <div className="text-center py-12 text-muted-foreground bg-card rounded-2xl">
+                No events found.
+            </div>
+        )}
+        {canLoadMore && (
+            <Button onClick={handleLoadMore} variant="outline" className="w-full active-press">
+                <ChevronDown className="w-4 h-4 mr-2" />
+                Load More
+            </Button>
+        )}
+    </div>
+
+
+    {/* Desktop Table View */}
+    <div className="hidden md:block glass-panel rounded-[2rem]">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Event</TableHead>
+            <TableHead className="w-[45%]">Event</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Pool</TableHead>
-            <TableHead>End Date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Betting Locks</TableHead>
+            <TableHead className="text-right w-[300px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {loading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i}>
-                <TableCell><Skeleton className="h-6 w-48" /></TableCell>
-                <TableCell><Skeleton className="h-8 w-20" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                <TableCell className="text-right flex items-center justify-end gap-2">
-                  <Skeleton className="h-8 w-24" />
-                  <Skeleton className="h-8 w-24" />
+          {visibleEvents && visibleEvents.length > 0 ? (
+            visibleEvents.map((event) => (
+              <TableRow key={event.id} onClick={() => router.push(`/event/${event.id}`)} className="cursor-pointer group">
+                <TableCell className="font-medium max-w-sm truncate text-foreground group-hover:text-primary transition-colors">
+                  <div className="flex items-center">
+                    <span>{event.question}</span>
+                  </div>
                 </TableCell>
-              </TableRow>
-            ))
-          ) : events && events.length > 0 ? (
-            events.map((event) => (
-              <TableRow key={event.id}>
-                <TableCell className="font-medium max-w-sm truncate">{event.question}</TableCell>
                 <TableCell>{getStatusBadge(event.status)}</TableCell>
-                <TableCell>${event.totalPool.toFixed(2)}</TableCell>
-                <TableCell>{format(new Date(event.endDate as Date), "PPp")}</TableCell>
+                <TableCell>{event.totalPool.toFixed(4)} {chain?.nativeCurrency.symbol}</TableCell>
+                <TableCell>{event.bettingStopDate ? format(new Date(event.bettingStopDate), "PPp") : 'N/A'}</TableCell>
                 <TableCell className="text-right">
                    <div className="flex items-center justify-end gap-2">
                       <Button 
                         size="sm" 
-                        className="bg-primary/80 text-background-dark font-bold hover:bg-primary"
-                        onClick={() => handleDeclare(event)}
-                        disabled={event.status !== 'closed'}
+                        variant="secondary"
+                        className="active-press"
+                        onClick={(e) => { e.stopPropagation(); handleDeclare(event); }}
+                        disabled={event.status === 'finished' || event.status === 'canceled'}
                         >
                          Declare Result
                       </Button>
                       <Button 
                         size="sm" 
                         variant="destructive"
-                        className="bg-error/80 text-white font-bold hover:bg-error"
-                        onClick={() => handleCancel(event)}
+                        className="active-press"
+                        onClick={(e) => { e.stopPropagation(); handleCancel(event); }}
                         disabled={event.status !== 'open'}
                         >
-                         Cancel Event
+                         <Trash2 className="w-4 h-4 mr-2"/>
+                         Delete/Refund
                       </Button>
                    </div>
                 </TableCell>
@@ -119,6 +209,15 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
           )}
         </TableBody>
       </Table>
+       {canLoadMore && (
+        <div className="p-4 border-t">
+            <Button onClick={handleLoadMore} variant="outline" className="w-full active-press">
+                <ChevronDown className="w-4 h-4 mr-2" />
+                Load More
+            </Button>
+        </div>
+        )}
+      </div>
       {selectedEvent && (
         <>
             <DeclareOutcomeDialog
@@ -126,6 +225,8 @@ export function AdminEventTable({ events, loading, onActionSuccess }: AdminEvent
                 setIsOpen={setDeclareOpen}
                 event={selectedEvent}
                 onActionSuccess={onActionSuccess}
+                walletClient={walletClient}
+                address={address}
             />
             <CancelEventDialog
                 isOpen={isCancelOpen}

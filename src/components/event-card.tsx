@@ -1,78 +1,96 @@
-
 'use client';
 
-import { useToast } from '@/hooks/use-toast';
-import type { Event, BetOutcome } from '@/lib/types';
-import { cn } from '@/lib/utils';
-import { useState } from 'react';
-import { useWallet } from '@/hooks/use-wallet';
-import { formatDistanceToNowStrict } from 'date-fns';
-import { useAdmin } from '@/hooks/use-admin';
+import type { Event } from '@/lib/types';
 import Link from 'next/link';
-import { Layers, Timer } from 'lucide-react';
+import Image from 'next/image';
+import placeholderData from '@/lib/placeholder-images.json';
+import { DynamicIcon } from '@/lib/icons';
+import { useRouter } from 'next/navigation';
+import { useCountdown } from '@/hooks/use-countdown';
+import { useAdmin } from '@/hooks/use-admin';
 
 export function EventCard({ event }: { event: Event }) {
-  const { toast } = useToast();
-  const { connected } = useWallet();
-  const { isAdmin } = useAdmin();
-  
-  const yesPercentage =
-    event.totalPool > 0 ? (event.outcomes.yes / event.totalPool) * 100 : 50;
-  
-  const timeToEnd = formatDistanceToNowStrict(new Date(event.endDate), { addSuffix: true });
+  const categoryDetails = placeholderData.categories.find(c => c.name === event.category);
+  const imageUrl = event.imageUrl || categoryDetails?.image || `https://picsum.photos/seed/${event.id}/600/400`;
+  const { timeLeft } = useCountdown(event.bettingStopDate);
 
-  const isBettingDisabled = !connected || isAdmin || event.status !== 'open';
+  const yesPercentage = event.totalPool > 0 ? (event.outcomes.yes / event.totalPool) * 100 : 50;
 
   return (
-    <Link href={`/event/${event.id}`} className="flex flex-col rounded-lg bg-card-dark p-4 transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10">
-        <div className="relative mb-4 w-full">
-            <div 
-                className="aspect-video w-full rounded-lg bg-cover bg-center" 
-                style={{backgroundImage: `url("https://picsum.photos/seed/${event.id}/600/400")`}}
-                data-ai-hint={event.category.toLowerCase()}
-            ></div>
-            <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
-                <div className="size-2 animate-pulse rounded-full bg-green-400"></div>
-                LIVE
+    <Link 
+      href={`/event/${event.id}`} 
+      className="relative rounded-[2.5rem] overflow-hidden h-[340px] group cursor-pointer active-press shadow-2xl shadow-black/30 ring-1 ring-white/10 hover:ring-gold-500/30 transition-all"
+    >
+      <Image 
+          src={imageUrl} 
+          alt={event.question} 
+          fill 
+          className="object-cover transition-transform duration-1000 group-hover:scale-110"
+          sizes="(max-width: 768px) 90vw, (max-width: 1280px) 50vw, 33vw"
+      />
+      <div className="absolute inset-0 card-gradient"></div>
+      
+      <div className="relative z-10 p-7 flex flex-col justify-between h-full">
+        <div className="flex justify-between items-start">
+          <div className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-lg border border-white/10 shadow-lg">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white">{event.category}</span>
+          </div>
+          {timeLeft && (
+            <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-lg">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="text-xs font-mono font-medium text-white tracking-tight">
+                {String(timeLeft.hours + (timeLeft.days * 24)).padStart(2, '0')}:
+                {String(timeLeft.minutes).padStart(2, '0')}:
+                {String(timeLeft.seconds).padStart(2, '0')}
+              </span>
             </div>
+          )}
         </div>
-        <p className="mb-3 text-lg font-bold leading-tight tracking-tight">{event.question}</p>
         
-        <div className="mb-4 flex flex-col gap-2">
-            <div className="flex w-full items-center justify-between text-sm font-medium">
-                <span className="text-yes">YES</span>
-                <span>{yesPercentage.toFixed(0)}%</span>
+        <div>
+          <h3 className="text-white font-display text-2xl font-bold mb-5 leading-tight drop-shadow-lg group-hover:text-gold-400 transition-colors">{event.question}</h3>
+          
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+            <div className="flex justify-between text-xs text-zinc-200 mb-3">
+              <span>Probability</span>
+              <span className="text-emerald-400 font-bold tracking-wider">{yesPercentage.toFixed(0)}% YES</span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-yes" style={{ width: `${yesPercentage}%` }}></div>
+            
+            <div className="relative h-2 w-full bg-black/40 rounded-full overflow-hidden mb-3">
+              <div 
+                className="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.6)]" 
+                style={{width: `${yesPercentage}%`}}
+              ></div>
             </div>
+            
+            <div className="flex justify-between items-end">
+              <div>
+                <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-0.5">Total Pot</p>
+                <p className="text-sm font-bold text-gold-400">{event.totalPool.toFixed(0)} T</p>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <div className="mb-4 flex flex-col gap-2">
-            <div className="flex w-full items-center justify-between text-sm font-medium">
-                <span className="text-no">NO</span>
-                <span>{(100 - yesPercentage).toFixed(0)}%</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-no" style={{ width: `${100 - yesPercentage}%` }}></div>
-            </div>
-        </div>
-
-        <div className="mt-auto flex flex-col gap-3 border-t border-border-custom pt-4">
-            <div className="flex items-center justify-between text-sm text-white/60">
-                <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4" />
-                    <span>Pool: {event.totalPool.toFixed(0)} $TRUST</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Timer className="w-4 h-4" />
-                    <span>{timeToEnd}</span>
-                </div>
-            </div>
-             <button className="flex h-11 w-full cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary text-base font-bold text-black transition-colors hover:bg-primary/90">
-                <span className="truncate">Stake: {event.minStake} - {event.maxStake}</span>
-             </button>
-        </div>
+      </div>
     </Link>
   );
+}
+
+export function SuggestMarketCard() {
+    const router = useRouter();
+    const { isAdmin, loading } = useAdmin();
+
+    if (loading || !isAdmin) {
+        return null;
+    }
+
+    return (
+        <button onClick={() => router.push('/admin?tab=scout')} className="rounded-[2.5rem] border-2 border-dashed border-zinc-700 dark:border-white/10 p-6 flex flex-col items-center justify-center text-center hover:bg-zinc-800/50 dark:hover:bg-white/[0.02] hover:border-gold-500/30 transition-all cursor-pointer active-press h-[340px] bg-white/50 dark:bg-black/20 group">
+            <div className="w-16 h-16 rounded-full bg-zinc-800 dark:bg-white/5 flex items-center justify-center mb-5 text-zinc-500 group-hover:bg-gold-500 group-hover:text-black transition-all duration-500 shadow-xl ring-1 ring-inset ring-white/10">
+                <DynamicIcon name="Lightbulb" className="w-8 h-8" strokeWidth="1.5" />
+            </div>
+            <h3 className="text-zinc-900 dark:text-white font-display text-2xl font-bold mb-3">Suggest a Market</h3>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-2 max-w-[200px] leading-relaxed">Use the AI Scout to find new, verifiable event topics for the platform.</p>
+        </button>
+    )
 }

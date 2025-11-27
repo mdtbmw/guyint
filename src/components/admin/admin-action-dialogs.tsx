@@ -24,6 +24,8 @@ import type { Event, BetOutcome } from "@/lib/types";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useWallet } from "@/hooks/use-wallet";
+import { useNotifications } from '@/lib/state/notifications';
+import { WalletClient, Address } from "viem";
 
 interface DialogProps {
     isOpen: boolean;
@@ -32,11 +34,17 @@ interface DialogProps {
     onActionSuccess: () => void;
 }
 
-export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess }: DialogProps) {
+interface DeclareDialogProps extends DialogProps {
+    walletClient: WalletClient | null | undefined;
+    address: Address | undefined;
+}
+
+
+export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess, walletClient, address }: DeclareDialogProps) {
     const { toast } = useToast();
-    const { walletClient, address } = useWallet();
     const [isLoading, setIsLoading] = useState(false);
     const [outcome, setOutcome] = useState<BetOutcome | null>(null);
+    const { addNotification } = useNotifications();
 
     const handleDeclare = async () => {
         if (!outcome) {
@@ -49,15 +57,31 @@ export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess
         }
         setIsLoading(true);
         try {
-            const txHash = await blockchainService.declareResult(walletClient, address, BigInt(event.id), outcome === 'YES');
-            toast({ title: 'Transaction Submitted', description: `Waiting for confirmation... Tx: ${txHash.slice(0, 10)}...` });
+            const txHash = await blockchainService.resolveEvent(walletClient, address, BigInt(event.id), outcome === 'YES');
+            addNotification({
+                title: "Transaction Submitted",
+                description: `Declaring outcome... Tx: ${txHash.slice(0, 10)}...`,
+                icon: 'Loader2',
+                type: 'onEventResolved'
+            });
             await blockchainService.waitForTransaction(txHash);
-            toast({ title: 'Success!', description: `The outcome for "${event.question}" has been declared as ${outcome}.` });
+            addNotification({
+                title: 'Outcome Declared!',
+                description: `Event "${event.question.slice(0, 20)}..." has been resolved.`,
+                icon: 'CheckCircle',
+                type: 'onEventResolved'
+            });
             onActionSuccess();
             setIsOpen(false);
         } catch(e: any) {
             console.error(e);
-            toast({ variant: 'destructive', title: 'Failed to Declare Outcome', description: e.shortMessage || 'An unexpected error occurred.' });
+            addNotification({
+                variant: 'destructive',
+                title: 'Failed to Declare Outcome',
+                description: e.message || 'An unexpected error occurred.',
+                icon: 'AlertTriangle',
+                type: 'general'
+            });
         } finally {
             setIsLoading(false);
         }
@@ -65,15 +89,15 @@ export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess
 
     return (
         <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogContent className="bg-neutral-900 border-neutral-800">
+            <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle className="text-white">Declare Winning Outcome</AlertDialogTitle>
-                    <AlertDialogDescription className="text-white/60">
+                    <AlertDialogTitle>Declare Winning Outcome</AlertDialogTitle>
+                    <AlertDialogDescription>
                         Select the final, verified outcome for the event: "{event.question}". This action is irreversible and will allow winners to claim their funds.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="my-4">
-                     <Select onValueChange={(value: BetOutcome) => setOutcome(value)}>
+                     <Select onValueChange={(value: BetOutcome) => setOutcome(value)} disabled={event.status !== 'open' && event.status !== 'closed'}>
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select the winning outcome..." />
                         </SelectTrigger>
@@ -83,9 +107,9 @@ export function DeclareOutcomeDialog({ isOpen, setIsOpen, event, onActionSuccess
                         </SelectContent>
                     </Select>
                 </div>
-                <AlertDialogFooter className="border-t border-white/10 pt-4">
-                    <AlertDialogCancel className="bg-transparent text-white/80 border-white/20 hover:bg-white/10 hover:text-white" disabled={isLoading}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction className="bg-emerald-600 text-white hover:bg-emerald-500" onClick={handleDeclare} disabled={isLoading || !outcome}>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeclare} disabled={isLoading || !outcome || (event.status !== 'open' && event.status !== 'closed')}>
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {isLoading ? 'Submitting...' : 'Declare Outcome'}
                     </AlertDialogAction>
@@ -99,6 +123,8 @@ export function CancelEventDialog({ isOpen, setIsOpen, event, onActionSuccess }:
     const { toast } = useToast();
     const { walletClient, address } = useWallet();
     const [isLoading, setIsLoading] = useState(false);
+    const { addNotification } = useNotifications();
+
 
     const handleCancel = async () => {
          if (!walletClient || !address) {
@@ -108,14 +134,31 @@ export function CancelEventDialog({ isOpen, setIsOpen, event, onActionSuccess }:
         setIsLoading(true);
         try {
             const txHash = await blockchainService.cancelEvent(walletClient, address, BigInt(event.id));
-            toast({ title: 'Transaction Submitted', description: `Waiting for confirmation... Tx: ${txHash.slice(0, 10)}...` });
+             addNotification({
+                title: "Transaction Submitted",
+                description: `Canceling event... Tx: ${txHash.slice(0, 10)}...`,
+                icon: 'Loader2',
+                type: 'general'
+            });
             await blockchainService.waitForTransaction(txHash);
-            toast({ title: 'Success!', description: `The event "${event.question}" has been canceled. Users can now claim refunds.` });
+            addNotification({
+                title: 'Event Canceled',
+                description: `Event "${event.question.slice(0, 20)}..." has been canceled. All stakes have been refunded.`,
+                icon: 'Ban',
+                variant: 'destructive',
+                type: 'general'
+            });
             onActionSuccess();
             setIsOpen(false);
         } catch(e: any) {
             console.error(e);
-            toast({ variant: 'destructive', title: 'Failed to Cancel Event', description: e.shortMessage || 'An unexpected error occurred.' });
+             addNotification({
+                variant: 'destructive',
+                title: 'Failed to Cancel Event',
+                description: e.message || 'An unexpected error occurred.',
+                icon: 'AlertTriangle',
+                type: 'general'
+            });
         } finally {
             setIsLoading(false);
         }
@@ -123,18 +166,18 @@ export function CancelEventDialog({ isOpen, setIsOpen, event, onActionSuccess }:
     
     return (
         <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogContent className="bg-neutral-900 border-neutral-800">
+            <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle className="text-white">Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription className="text-white/60">
-                        You are about to cancel the event: "{event.question}". This will change its status to "Canceled" and allow all participants to claim a full refund of their stake. This action is irreversible.
+                    <AlertDialogTitle>Delete and Refund Event?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        You are about to delete the event: "{event.question}". This will permanently cancel the event and allow all participants to claim a full refund of their stake. This action is irreversible.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="border-t border-white/10 pt-4">
-                    <AlertDialogCancel className="bg-transparent text-white/80 border-white/20 hover:bg-white/10 hover:text-white" disabled={isLoading}>Back</AlertDialogCancel>
-                    <AlertDialogAction className="bg-rose-600 text-white hover:bg-rose-500" onClick={handleCancel} disabled={isLoading}>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isLoading}>Back</AlertDialogCancel>
+                    <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleCancel} disabled={isLoading}>
                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isLoading ? 'Canceling...' : 'Yes, Cancel Event'}
+                        {isLoading ? 'Canceling...' : 'Yes, Delete & Refund'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

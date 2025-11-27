@@ -1,40 +1,40 @@
+
 'use client';
 
-import { useAccount, useBalance, useDisconnect, useWalletClient } from 'wagmi';
+import { useAccount, useBalance, useDisconnect, useSwitchChain, useWalletClient } from 'wagmi';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
-import { useCallback } from 'react';
-import { getPublicClient } from 'wagmi/actions';
-import { intuitionMainnet } from '@/lib/intuition-mainnet';
+import { useIsMounted } from './use-is-mounted';
+import { activeChain } from '@/lib/chains';
 
 export function useWallet() {
   const { address, isConnected, isConnecting, chain } = useAccount();
-  const { data: balanceData, isLoading: balanceLoading, refetch: fetchBalance } = useBalance({ address });
   const { open } = useWeb3Modal();
+  const { switchChain } = useSwitchChain();
   const { disconnect } = useDisconnect();
-  const { data: walletClient } = useWalletClient();
-  const publicClient = getPublicClient({ chainId: intuitionMainnet.id });
-
-  const connectWallet = useCallback(() => {
-    open();
-  }, [open]);
-
-  const disconnectWallet = useCallback(() => {
-    disconnect();
-  }, [disconnect]);
+  const isMounted = useIsMounted();
   
+  const { data: walletClient } = useWalletClient({ chainId: chain?.id });
+
+  const { data: balanceData, isLoading: balanceLoading, refetch: fetchBalance } = useBalance({ 
+    address,
+  });
+
   const balance = balanceData ? parseFloat(balanceData.formatted) : 0;
+  const connected = isMounted && isConnected;
+  const wrongNetwork = isMounted && isConnected && chain?.id !== activeChain.id;
 
   return {
     address,
-    connected: isConnected,
-    isConnecting,
+    connected,
+    isConnecting: isConnecting || !isMounted,
     chain,
     balance,
     balanceLoading,
     fetchBalance,
-    connectWallet,
-    disconnectWallet,
+    connectWallet: open,
+    disconnect,
     walletClient,
-    publicClient,
+    wrongNetwork,
+    switchChain: () => switchChain({ chainId: activeChain.id }),
   };
 }

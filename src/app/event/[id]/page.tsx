@@ -1,144 +1,275 @@
 
+
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Event } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { useWallet } from '@/hooks/use-wallet';
-import { useToast } from '@/hooks/use-toast';
 import { blockchainService } from '@/services/blockchain';
-import { ArrowLeft } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StakePanel } from '@/components/stake-panel';
-import { MobilePageHeader } from '@/components/layout/mobile-page-header';
+import Image from 'next/image';
+import { useNotifications } from '@/lib/state/notifications';
+import { PageHeader } from '@/components/layout/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Layers, Scale, Users, Lock, Timer } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import placeholderData from '@/lib/placeholder-images.json';
+import { useCountdown } from '@/hooks/use-countdown';
+
+
+const EventDetailSkeleton = () => (
+    <div className="space-y-6">
+        <Skeleton className="h-48 w-full md:h-64 rounded-lg" />
+        <div className="space-y-2">
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-8 w-full" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Skeleton className="h-24 w-full rounded-lg" />
+            <Skeleton className="h-24 w-full rounded-lg" />
+            <Skeleton className="h-24 w-full rounded-lg" />
+        </div>
+        <div className="space-y-3 pt-4">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+        </div>
+    </div>
+);
+
+const CountdownDisplay = ({ time, label }: { time: number, label: string }) => (
+    <div className="flex flex-col items-center">
+        <p className="text-4xl font-bold tracking-tighter text-primary">{String(time).padStart(2, '0')}</p>
+        <p className="text-xs font-mono uppercase text-muted-foreground">{label}</p>
+    </div>
+)
 
 
 export default function EventDetailPage() {
   const { id } = useParams();
-  const { toast } = useToast();
+  const { addNotification } = useNotifications();
   const router = useRouter();
   const [event, setEvent] = useState<Event | null>(null);
   const [eventLoading, setEventLoading] = useState(true);
-
-  const { address, walletClient, balance } = useWallet();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  
+  const { balance, chain } = useWallet();
+  const { timeLeft, hasEnded: countdownEnded } = useCountdown(event?.bettingStopDate || null);
 
   const fetchEvent = useCallback(async () => {
     if (!id) return;
     setEventLoading(true);
     try {
+      blockchainService.clearCache();
       const fetchedEvent = await blockchainService.getEventById(id as string);
       if (!fetchedEvent) {
-          toast({
+          addNotification({
               variant: "destructive",
               title: "Event not found",
-              description: "The requested event could not be found or has been removed."
+              description: "The requested event could not be found or has been removed.",
+              icon: 'AlertTriangle',
+              type: 'general'
           });
           router.push('/');
           return;
       }
       setEvent(fetchedEvent);
-    } catch (e) {
-      console.error("Failed to fetch event", e);
-      toast({
+    } catch (e: any) {
+      addNotification({
         variant: "destructive",
-        title: "Error",
-        description: "Could not load event details.",
+        title: "Error Loading Event",
+        description: e.shortMessage || "Could not load event details from the blockchain.",
+        icon: 'AlertTriangle',
+        type: 'general'
       });
     } finally {
       setEventLoading(false);
     }
-  }, [id, toast, router]);
+  }, [id, addNotification, router]);
 
   useEffect(() => {
     fetchEvent();
   }, [fetchEvent]);
 
-  if (eventLoading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <Skeleton className="h-12 w-3/4" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-8">
-            <div className="flex flex-col space-y-4">
-                 <Skeleton className="aspect-video w-full rounded-lg" />
-                 <Skeleton className="h-24 w-full" />
-            </div>
-            <Skeleton className="h-96 w-full" />
-        </div>
-      </div>
-    );
+  
+  const handleBetPlaced = () => {
+    fetchEvent();
+    setIsSheetOpen(false); // Close sheet after placing bet
   }
 
-  if (!event) {
-    // This state is briefly hit before the redirect in fetchEvent happens.
-    return <div className="text-center py-12">Loading event...</div>;
+
+  if (eventLoading || !event) {
+    return <EventDetailSkeleton />;
   }
   
   const yesOdds = event.totalPool > 0 && event.outcomes.yes > 0 ? (event.totalPool / event.outcomes.yes) : 1;
   const noOdds = event.totalPool > 0 && event.outcomes.no > 0 ? (event.totalPool / event.outcomes.no) : 1;
-  const yesWinPercentage = event.totalPool > 0 ? (event.outcomes.yes / event.totalPool) * 100 : 50;
+  const yesPoolPercentage = event.totalPool > 0 ? (event.outcomes.yes / event.totalPool) * 100 : 50;
+
+  const bettingHasEnded = countdownEnded || (event.bettingStopDate ? new Date(event.bettingStopDate) < new Date() : event.status !== 'open');
+  
+  const timeLabel = (() => {
+    if (bettingHasEnded && event.status !== 'finished' && event.status !== 'canceled') {
+        return "Betting Locked. Awaiting outcome.";
+    }
+    if (event.resolutionDate) {
+      return `Resolved on ${format(new Date(event.resolutionDate), 'PP')}`;
+    }
+    if (event.bettingStopDate) {
+        return `Ended on ${format(new Date(event.bettingStopDate), 'PP')}`;
+    }
+    return 'Event concluded.';
+  })();
+
+  const categoryImage = placeholderData.categories.find(c => c.name === event.category)?.image;
+  const imageUrl = event.imageUrl || categoryImage || `https://picsum.photos/seed/${event.id}/1200/675`;
 
   return (
-    <div className="flex flex-col min-h-screen -m-4 sm:-m-6 md:m-0">
-      <MobilePageHeader title={event.question} />
-
-      <div className="p-4 @container flex-grow">
-          <div className="flex flex-col items-stretch justify-start rounded-xl @xl:flex-row @xl:items-start bg-component-dark/50 border border-border-custom">
-            <div
-              className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-t-xl @xl:min-w-96 @xl:rounded-l-xl @xl:rounded-tr-none"
-              style={{backgroundImage: `url("https://picsum.photos/seed/${event.id}/800/400")`}}
-              data-ai-hint={event.category.toLowerCase()}
-            />
-            <div className="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-2 p-4 @xl:px-4">
-              <p className="text-muted-foreground text-sm font-normal leading-normal">{event.category} - Ends {format(new Date(event.endDate), "PP")}</p>
-              <p className="text-white text-lg font-bold leading-tight tracking-[-0.015em]">{event.question}</p>
-              <div className="flex items-end gap-3 justify-between">
-                <div className="flex flex-col gap-1">
-                  <p className="text-muted-foreground text-base font-normal leading-normal">Odds: <span className="text-accent-blue font-bold">{yesOdds.toFixed(2)}</span> vs <span className="text-muted-foreground/80">{noOdds.toFixed(2)}</span></p>
-                  <p className="text-muted-foreground text-base font-normal leading-normal">Pool: {event.totalPool.toFixed(2)} $TRUST</p>
-                </div>
-              </div>
+    <div className="space-y-8">
+    <div className="md:grid md:grid-cols-2 md:gap-8 lg:gap-12">
+        {/* Left side: Scrollable Event Info */}
+        <div className="pb-24 md:pb-6">
+             <div className="relative aspect-video w-full mb-6">
+                 <Image
+                    src={imageUrl}
+                    alt={event.question}
+                    fill
+                    className="object-cover rounded-lg"
+                    data-ai-hint={event.category.toLowerCase()}
+                    priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent rounded-lg" />
             </div>
-          </div>
 
-        <Tabs defaultValue="stats" className="w-full mt-4">
-            <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 border-b border-border-custom rounded-none">
-              <TabsTrigger value="stats" className="border-b-[3px] data-[state=active]:border-b-primary data-[state=active]:text-white text-muted-foreground rounded-none">Stats</TabsTrigger>
-              <TabsTrigger value="description" className="border-b-[3px] data-[state=active]:border-b-primary data-[state=active]:text-white text-muted-foreground rounded-none">Description</TabsTrigger>
-              <TabsTrigger value="rules" className="border-b-[3px] data-[state=active]:border-b-primary data-[state=active]:text-white text-muted-foreground rounded-none">Rules</TabsTrigger>
-            </TabsList>
-            <TabsContent value="stats" className="mt-4">
-                <div className="flex flex-wrap gap-4">
-                    <div className="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-6 border border-border-custom">
-                        <p className="text-white text-base font-medium leading-normal">YES Win %</p>
-                        <p className="text-white tracking-light text-2xl font-bold leading-tight">{yesWinPercentage.toFixed(0)}%</p>
-                    </div>
-                    <div className="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-6 border border-border-custom">
-                        <p className="text-white text-base font-medium leading-normal">NO Win %</p>
-                        <p className="text-white tracking-light text-2xl font-bold leading-tight">{(100-yesWinPercentage).toFixed(0)}%</p>
-                    </div>
+            <PageHeader
+                title={event.question}
+                description={`${event.category}`}
+            />
+            
+            <div className="space-y-6">
+                
+                { event.status === 'open' && !bettingHasEnded && timeLeft ? (
+                    <Card className="bg-secondary/50">
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Timer className="w-4 h-4 text-primary" />
+                                Betting Closes In
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex items-center justify-around">
+                            <CountdownDisplay time={timeLeft.days} label="Days" />
+                            <CountdownDisplay time={timeLeft.hours} label="Hours" />
+                            <CountdownDisplay time={timeLeft.minutes} label="Minutes" />
+                            <CountdownDisplay time={timeLeft.seconds} label="Seconds" />
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card>
+                        <CardContent className="p-4 text-center text-muted-foreground font-medium">
+                            {timeLabel}
+                        </CardContent>
+                    </Card>
+                )}
+
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                           <CardTitle className="text-sm font-medium text-muted-foreground">Total Pool</CardTitle>
+                           <Layers className="w-4 h-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-2xl font-bold">{event.totalPool.toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground">{chain?.nativeCurrency.symbol}</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                           <CardTitle className="text-sm font-medium text-muted-foreground">YES Odds</CardTitle>
+                           <Scale className="w-4 h-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-2xl font-bold">{yesOdds.toFixed(2)}x</p>
+                             <p className="text-xs text-muted-foreground">Payout multiplier</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                           <CardTitle className="text-sm font-medium text-muted-foreground">NO Odds</CardTitle>
+                           <Scale className="w-4 h-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                           <p className="text-2xl font-bold">{noOdds.toFixed(2)}x</p>
+                           <p className="text-xs text-muted-foreground">Payout multiplier</p>
+                        </CardContent>
+                    </Card>
                 </div>
-            </TabsContent>
-            <TabsContent value="description" className="mt-4">
-              <p className="text-muted-foreground text-base font-normal leading-normal">{event.question}</p>
-            </TabsContent>
-            <TabsContent value="rules" className="mt-4">
-               <p className="text-muted-foreground text-sm font-normal leading-normal">All bets are final. Outcomes are determined by a decentralized oracle. In case of ambiguity or cancellation, all stakes will be refunded. A 3% fee is taken from winnings. Your final payout may differ from the estimate at the time of your bet based on pool dynamics.</p>
-            </TabsContent>
-        </Tabs>
-      </div>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Pool Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="relative w-full h-8 rounded-lg bg-secondary overflow-hidden flex items-center justify-between text-background font-bold text-sm px-3">
+                            <div className="absolute top-0 left-0 h-full bg-primary transition-all duration-500 z-0" style={{ width: `${yesPoolPercentage}%`}}></div>
+                            <span className="z-10">YES {yesPoolPercentage.toFixed(0)}%</span>
+                            <span className="z-10">NO {(100 - yesPoolPercentage).toFixed(0)}%</span>
+                        </div>
+                    </CardContent>
+                 </Card>
 
-      <div className="flex-grow"></div>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Rules & Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground text-sm">{event.description || 'All bets are final. Outcomes are determined by a decentralized oracle. In case of ambiguity or cancellation, all stakes will be refunded.'}</p>
+                    </CardContent>
+                 </Card>
+            </div>
+        </div>
 
-      <StakePanel 
-        event={event} 
-        userBalance={balance} 
-        onBetPlaced={fetchEvent} 
-        yesOdds={yesOdds} 
-        noOdds={noOdds} 
-      />
-
+        {/* Right side: Stake Panel (fixed on desktop) */}
+        <div className="hidden md:sticky md:top-24 md:h-fit md:flex md:items-start">
+            <div className="w-full md:max-w-md mx-auto">
+                 <StakePanel 
+                    event={event} 
+                    userBalance={balance} 
+                    onBetPlaced={handleBetPlaced} 
+                    yesOdds={yesOdds} 
+                    noOdds={noOdds} 
+                />
+            </div>
+        </div>
+    </div>
+    
+    {/* Bottom Sheet and FAB for Mobile */}
+    <div className="md:hidden">
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+                <div className="fixed bottom-0 left-0 right-0 p-2 bg-background/80 backdrop-blur-sm border-t border-border z-40">
+                     <Button className="w-full h-14 text-base font-bold rounded-2xl active-press" disabled={bettingHasEnded}>
+                        {bettingHasEnded ? <><Lock className="w-4 h-4 mr-2"/>Betting Closed</> : 'Place Bet'}
+                    </Button>
+                </div>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="p-0 h-auto rounded-t-2xl border-t-0 bg-secondary shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                 <SheetHeader className="p-4 border-b">
+                    <SheetTitle className="text-center">{event.question}</SheetTitle>
+                </SheetHeader>
+                <StakePanel 
+                    event={event} 
+                    userBalance={balance} 
+                    onBetPlaced={handleBetPlaced} 
+                    yesOdds={yesOdds} 
+                    noOdds={noOdds} 
+                />
+            </SheetContent>
+        </Sheet>
+    </div>
     </div>
   );
 }

@@ -1,172 +1,503 @@
+
+
 'use client';
 
-import {
-  createPublicClient,
-  http,
-  formatEther,
-  parseEther,
-  Hex,
-  Account,
-  Address,
-  Hash,
-  HttpRequestError,
-  ContractFunctionExecutionError,
-} from 'viem';
-import { createAtomFromString } from '@0xintuition/sdk';
-import type { Event, EventStatus } from '@/lib/types';
-import { WalletClient } from 'wagmi';
-import { intuitionMainnet } from '@/lib/intuition-mainnet';
+import { createPublicClient, http, formatEther, parseEther, Hex, Address, Hash, WalletClient, PublicClient, getAddress, UserRejectedRequestError, TransactionReceipt, decodeEventLog } from 'viem';
+import type { Event, BetOutcome, EventStatus, NotificationType, PnLBet, Bet } from '@/lib/types';
+import { IntuitionBettingOracleAbi } from '@/lib/IntuitionBettingAbi';
+import { activeChain } from '@/lib/chains';
+import placeholderData from '@/lib/placeholder-images.json';
 
-const INTUITION_VAULT_ADDRESS: Address | undefined = process.env.NEXT_PUBLIC_INTUITION_VAULT_ADDRESS as Address;
-
-if (!INTUITION_VAULT_ADDRESS) {
-  throw new Error("CRITICAL: NEXT_PUBLIC_INTUITION_VAULT_ADDRESS environment variable is not set. This is required for the Intuition SDK.");
+// This is a global function to be initialized by a top-level component
+let notify: (notification: Omit<NotificationType, 'id' | 'timestamp' | 'read'>) => void;
+export const initializeBlockchainServiceNotifier = (addNotification: (notification: Omit<NotificationType, 'id' | 'timestamp' | 'read'>) => void) => {
+    notify = addNotification;
 }
 
+const bettingAddressRaw = process.env.NEXT_PUBLIC_INTUITION_BETTING_ADDRESS;
+const DESCRIPTION_IMAGE_DELIMITER = '|||';
+
+// Simple in-memory cache
+let eventsCache: Event[] | null = null;
+let lastCacheTime: number | null = null;
+const CACHE_DURATION_MS = 30000; // 30 seconds
+
+type BetPlacedLog = { eventId: bigint; user: Address; outcome: boolean; amount: bigint; } & { blockNumber: bigint; };
+type WinningsClaimedLog = { eventId: bigint; user: Address; amount: bigint; } & { blockNumber: bigint; };
+type EventCanceledLog = { eventId: bigint } & { blockNumber: bigint; };
+
+interface AllLogs {
+    betPlaced: BetPlacedLog[];
+    winningsClaimed: WinningsClaimedLog[];
+    eventCanceled: EventCanceledLog[];
+}
+
+
 class IntuitionService {
-  public publicClient;
-  
+  public publicClient: PublicClient;
+  private contractAddress: Address | null = null;
+
   constructor() {
     this.publicClient = createPublicClient({
-      chain: intuitionMainnet,
+      chain: activeChain,
       transport: http(),
+      batch: { multicall: false } 
     });
+
+    if (bettingAddressRaw) {
+        try {
+            this.contractAddress = getAddress(bettingAddressRaw);
+        } catch {
+             console.error(`FATAL_ERROR: The provided NEXT_PUBLIC_INTUITION_BETTING_ADDRESS "${bettingAddressRaw}" is not a valid Ethereum address.`);
+        }
+    }
   }
 
-  // --- MOCKED DATA ---
-  // The @0xintuition/sdk documentation doesn't specify how to query atoms.
-  // In a real app, you'd use the SDK or a GraphQL endpoint to fetch this data.
-  // For now, we mock the data to keep the UI functional.
-  private mockEvents: Event[] = [
-    {
-      id: "1",
-      question: "Will the Intuition Protocol surpass 10,000 active users by the end of the year?",
-      category: "Crypto",
-      status: "open",
-      outcomes: { yes: 5500, no: 4500 },
-      totalPool: 10000,
-      participants: [],
-      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-      minStake: 10,
-      maxStake: 1000,
-    },
-    {
-        id: "2",
-        question: "Will the next major version of the Intuition SDK be released in Q3?",
-        category: "World Events",
-        status: "open",
-        outcomes: { yes: 8200, no: 1800 },
-        totalPool: 10000,
-        participants: [],
-        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
-        minStake: 5,
-        maxStake: 500,
+  private getContractAddress(): Address | null {
+    if (!this.contractAddress) {
+        if (process.env.NODE_ENV === 'development') {
+            console.warn("Configuration Warning: The smart contract address (NEXT_PUBLIC_INTUITION_BETTING_ADDRESS) is not set or is invalid. The application will run in a limited mode. Please check your .env file.");
+        }
+        return null;
     }
-  ];
-  // --- END MOCKED DATA ---
+    return this.contractAddress;
+  }
 
 
-  // This function is now a placeholder. A real implementation would query the Intuition network.
-  async getAllEvents(): Promise<Event[]> {
-    console.log("INTUITION_SDK: Returning mocked event data. In production, this should query the Intuition GraphQL API or SDK.");
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-    return this.mockEvents;
+  public clearCache() {
+    eventsCache = null;
+    lastCacheTime = null;
+    console.log("Blockchain service cache cleared.");
   }
   
-  // This function is now a placeholder.
-  async getEventById(eventId: string): Promise<Event | null> {
-    console.log(`INTUITION_SDK: Returning mocked event data for ID: ${eventId}.`);
-    const event = this.mockEvents.find(e => e.id === eventId) || null;
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-    return event;
+  private parseDescriptionAndImage(fullDescription: string): { description: string, imageUrl?: string } {
+    if (fullDescription.includes(DESCRIPTION_IMAGE_DELIMITER)) {
+      const parts = fullDescription.split(DESCRIPTION_IMAGE_DELIMITER);
+      return {
+        description: parts[0],
+        imageUrl: parts[1]
+      };
+    }
+    return { description: fullDescription };
   }
 
-  // This function is now a placeholder.
-  async getMultipleUserBets(eventIds: bigint[], userAddress: Address): Promise<any[]> {
-    console.log("INTUITION_SDK: Returning empty user bets array. This needs to be implemented with the SDK.");
-    return [];
-  }
 
-  // This function is now a placeholder.
-  async getUserHistory(userAddress: Hex): Promise<{wins: bigint, losses: bigint}> {
-    console.log("INTUITION_SDK: Returning mocked user history. This needs to be implemented with the SDK.");
-    return { wins: 5n, losses: 2n };
-  }
+  private normalizeOnChainEvent(eventData: any, id: bigint): Event {
+    const totalPool = Number(formatEther(eventData.yesPool)) + Number(formatEther(eventData.noPool));
+    
+    let status: EventStatus;
+    switch(eventData.status) {
+        case 0: status = 'open'; break;
+        case 1: status = 'closed'; break;
+        case 2: status = 'finished'; break;
+        case 3: status = 'canceled'; break;
+        default: status = 'open';
+    }
+    
+    const bettingStopDate = eventData.bettingStopDate > 0 ? new Date(Number(eventData.bettingStopDate) * 1000) : null;
+    const resolutionDate = eventData.resolutionDate > 0 ? new Date(Number(eventData.resolutionDate) * 1000) : null;
+    
+    // If betting has ended but not resolved, status should be 'closed'
+    if (status === 'open' && bettingStopDate && bettingStopDate < new Date()) {
+      status = 'closed';
+    }
 
-  // This function IS IMPLEMENTED using the official SDK.
-  async createEvent(walletClient: WalletClient, account: Account, description: string, endDate: Date, category: string, minStake: number, maxStake: number): Promise<Hex> {
-    const config = {
-      walletClient: walletClient as any,
-      publicClient: this.publicClient,
-      ethMultiVaultAddress: INTUITION_VAULT_ADDRESS,
+
+    let winningOutcome: BetOutcome | undefined = undefined;
+    if(eventData.winningOutcome === 1) winningOutcome = 'YES';
+    else if (eventData.winningOutcome === 2) winningOutcome = 'NO';
+    
+    const { description, imageUrl: parsedImageUrl } = this.parseDescriptionAndImage(eventData.description || '');
+    
+    return {
+      id: String(id),
+      question: eventData.question,
+      description,
+      imageUrl: eventData.imageUrl || parsedImageUrl,
+      category: eventData.category,
+      startDate: null, // The contract doesn't store a start date
+      bettingStopDate: bettingStopDate,
+      resolutionDate: resolutionDate,
+      minStake: Number(formatEther(eventData.minStake)),
+      maxStake: Number(formatEther(eventData.maxStake)),
+      status: status,
+      outcomes: {
+        yes: Number(formatEther(eventData.yesPool)),
+        no: Number(formatEther(eventData.noPool)),
+      },
+      totalPool: totalPool,
+      participants: [], // This would require a separate indexing service to track efficiently
+      winningOutcome: winningOutcome,
     };
+  }
 
-    console.log("INTUITION_SDK: Calling createAtomFromString with description:", description);
-    
-    // The SDK's createAtomFromString function creates a new "atom" which represents our event question.
-    const result = await createAtomFromString(config, description);
+  private handleContractError(err: any, context: string): never {
+      console.error(`Error in ${context}:`, err);
+      // Attempt to find a more specific reason
+      const reason = (err.cause as any)?.reason || err.shortMessage || 'An unknown contract error occurred.';
+      
+      throw new Error(`A contract error occurred: ${reason}. Please check the console for details.`);
+  }
 
-    if (!result.hash) {
-      throw new Error("Intuition SDK: Failed to create atom, transaction hash is missing.");
+  async getPlatformFee(): Promise<number> {
+    const address = this.getContractAddress();
+    if (!address) return 0;
+
+    try {
+        const feeBps = await this.publicClient.readContract({
+            address: address,
+            abi: IntuitionBettingOracleAbi,
+            functionName: 'platformFeeBps',
+        });
+        return Number(feeBps);
+    } catch (e) {
+        console.error("Failed to fetch platform fee", e);
+        return 300; // Default to 3% if fetch fails
     }
-    
-    // In a real scenario, you might create additional "triples" to store metadata 
-    // like category, endDate, min/max stake, linking them to the atom you just created.
-    console.log(`INTUITION_SDK: Atom created successfully. Transaction hash: ${result.hash}. Atom ID: ${result.atomId}`);
+  }
 
-    // Add to mock data for instant UI update
-    this.mockEvents.push({
-      id: result.atomId.toString(),
-      question: description,
-      category,
-      endDate,
-      minStake,
-      maxStake,
-      status: "open",
-      outcomes: { yes: 0, no: 0 },
-      totalPool: 0,
-      participants: [],
+  async getAllEvents(): Promise<Event[]> {
+     const now = Date.now();
+     if (eventsCache && lastCacheTime && (now - lastCacheTime < CACHE_DURATION_MS)) {
+        console.log("Returning cached events");
+        return eventsCache;
+     }
+
+    try {
+        const address = this.getContractAddress();
+        if (!address) return [];
+
+        const nextId = await this.publicClient.readContract({
+            address: address,
+            abi: IntuitionBettingOracleAbi,
+            functionName: 'nextEventId',
+        });
+        
+        if (!nextId || nextId <= 1n) {
+            eventsCache = [];
+            lastCacheTime = now;
+            return [];
+        }
+
+        const eventIds = Array.from({ length: Number(nextId) - 1 }, (_, i) => BigInt(i + 1));
+        
+        if (eventIds.length === 0) {
+          eventsCache = [];
+          lastCacheTime = now;
+          return [];
+        }
+
+        const eventPromises = eventIds.map(id => 
+          this.publicClient.readContract({
+            address: address,
+            abi: IntuitionBettingOracleAbi,
+            functionName: 'getEventData',
+            args: [id],
+          }).catch(err => {
+            console.error(`Failed to fetch event ${id}:`, err);
+            return null; // Return null on failure for this specific call
+          })
+        );
+      
+      const onchainResults = await Promise.all(eventPromises);
+
+      const events = onchainResults
+        .map((res, index) => {
+          if (res) {
+            return this.normalizeOnChainEvent(res, eventIds[index]);
+          }
+          return null;
+        })
+        .filter((e): e is Event => e !== null && e.question !== '');
+
+      const sortedEvents = events.sort((a, b) => (b.bettingStopDate?.getTime() || 0) - (a.bettingStopDate?.getTime() || 0));
+      
+      eventsCache = sortedEvents;
+      lastCacheTime = now;
+
+      return sortedEvents;
+
+    } catch (err: any) {
+       console.error('Core `getAllEvents` call failed. This could be due to an RPC issue or invalid contract address.', err.message);
+       throw new Error("Failed to fetch event data from the blockchain. The network may be congested or the service unavailable.");
+    }
+  }
+
+  async getEventById(eventId: string): Promise<Event | null> {
+    const address = this.getContractAddress();
+    if (!address || !eventId) return null;
+
+    if (eventsCache) {
+      const cachedEvent = eventsCache.find(e => e.id === eventId);
+      if (cachedEvent) return cachedEvent;
+    }
+
+    try {
+      const eventData = await this.publicClient.readContract({
+        address: address,
+        abi: IntuitionBettingOracleAbi,
+        functionName: 'getEventData',
+        args: [BigInt(eventId)],
+      });
+      
+      if (!eventData || !eventData.question) return null;
+
+      const participants: Address[] = []; 
+
+      const normalized = this.normalizeOnChainEvent(eventData, BigInt(eventId));
+      normalized.participants = participants;
+      return normalized;
+
+    } catch (err) {
+      console.error(`Failed to get event by ID ${eventId}:`, err);
+      return null;
+    }
+  }
+  
+  async getMultipleUserBets(eventIds: bigint[], userAddress: Address): Promise<{yesAmount: bigint, noAmount: bigint, claimed: boolean}[]> {
+    const address = this.getContractAddress();
+    if (!address) return [];
+
+    try {
+        const betPromises = eventIds.map(id => 
+            this.publicClient.readContract({
+                address: address,
+                abi: IntuitionBettingOracleAbi,
+                functionName: 'getUserBet',
+                args: [id, userAddress],
+            }).catch(err => {
+                console.error(`Failed to fetch user bet for event ${id}:`, err);
+                return { yesAmount: 0n, noAmount: 0n, claimed: false }; // Return default on failure
+            })
+        );
+        const results = await Promise.all(betPromises);
+        return results;
+    } catch(e) {
+        console.error("Batch fetch for user bets failed", e);
+        // Return an array of default values matching the input length
+        return eventIds.map(() => ({ yesAmount: 0n, noAmount: 0n, claimed: false }));
+    }
+  }
+
+    async getAllLogs(userAddress?: Address): Promise<AllLogs> {
+        const address = this.getContractAddress();
+        if (!address) return { betPlaced: [], winningsClaimed: [], eventCanceled: [] };
+
+        try {
+            const fromBlock = 0n;
+
+            const rawLogs = await this.publicClient.getLogs({
+                address,
+                fromBlock,
+                toBlock: 'latest',
+            });
+
+            const betPlaced: BetPlacedLog[] = [];
+            const winningsClaimed: WinningsClaimedLog[] = [];
+            const eventCanceled: EventCanceledLog[] = [];
+
+            for (const log of rawLogs) {
+                try {
+                    const decodedLog = decodeEventLog({
+                        abi: IntuitionBettingOracleAbi,
+                        data: log.data,
+                        topics: log.topics,
+                    });
+
+                    if (userAddress && 'user' in decodedLog.args && decodedLog.args.user !== userAddress) {
+                        continue;
+                    }
+
+                    if (decodedLog.eventName === 'BetPlaced' && decodedLog.args) {
+                        betPlaced.push({
+                            ...(decodedLog.args as { eventId: bigint; user: Address; outcome: boolean; amount: bigint; }),
+                            blockNumber: log.blockNumber,
+                        });
+                    } else if (decodedLog.eventName === 'WinningsClaimed' && decodedLog.args) {
+                        winningsClaimed.push({
+                             ...(decodedLog.args as { eventId: bigint; user: Address; amount: bigint; }),
+                            blockNumber: log.blockNumber,
+                        });
+                    } else if (decodedLog.eventName === 'EventCanceled' && decodedLog.args) {
+                        eventCanceled.push({
+                            ...(decodedLog.args as { eventId: bigint; }),
+                            blockNumber: log.blockNumber,
+                        });
+                    }
+                } catch (e) {
+                    // Ignore logs that don't match our ABI
+                }
+            }
+
+            return {
+                betPlaced,
+                winningsClaimed,
+                eventCanceled,
+            };
+
+        } catch (e) {
+            console.error("Failed to fetch logs:", e);
+            return { betPlaced: [], winningsClaimed: [], eventCanceled: [] };
+        }
+    }
+  
+  async createEvent(
+    walletClient: WalletClient, 
+    account: Address, 
+    question: string,
+    description: string,
+    category: string,
+    bettingStopDate: Date,
+    resolutionDate: Date,
+    minStake: number, 
+    maxStake: number,
+    imageUrl?: string
+): Promise<{txHash: Hash, eventId: string}> {
+    const address = this.getContractAddress();
+    if (!address) throw new Error('Contract address not configured');
+    if (!walletClient.account) throw new Error('Wallet client is not connected.');
+    
+    notify({
+        title: 'Transaction Submitted',
+        description: `Creating event... please wait for confirmation.`,
+        icon: 'Loader2',
+        type: 'general' 
     });
 
-    return result.hash;
+    try {
+        const fullDescription = description;
+        
+        const finalImageUrl = imageUrl || placeholderData.categories.find(c => c.name === category)?.image || '';
+
+        const bettingTimestamp = BigInt(Math.floor(bettingStopDate.getTime() / 1000));
+        const resolutionTimestamp = BigInt(Math.floor(resolutionDate.getTime() / 1000));
+
+        const minStakeWei = parseEther(String(minStake));
+        const maxStakeWei = parseEther(String(maxStake));
+
+        const { request } = await this.publicClient.simulateContract({
+            account,
+            address: address,
+            abi: IntuitionBettingOracleAbi,
+            functionName: 'createEvent',
+            args: [question, fullDescription, category, finalImageUrl, bettingTimestamp, resolutionTimestamp, minStakeWei, maxStakeWei],
+        });
+        const txHash = await walletClient.writeContract(request);
+        const receipt = await this.waitForTransaction(txHash);
+
+        const eventLog = receipt.logs.find(log => {
+          try {
+            const decoded = decodeEventLog({ abi: IntuitionBettingOracleAbi, data: log.data, topics: log.topics });
+            return decoded.eventName === 'EventCreated';
+          } catch {
+            return false;
+          }
+        });
+
+        if (!eventLog) throw new Error('Could not find EventCreated log in transaction receipt');
+
+        const decodedLog = decodeEventLog({ abi: IntuitionBettingOracleAbi, data: eventLog.data, topics: eventLog.topics });
+        const eventId = (decodedLog.args as any)?.id?.toString();
+
+        if (!eventId) throw new Error('Could not determine eventId from transaction receipt');
+      
+        this.clearCache();
+
+        notify({
+            title: 'Event Created Successfully!',
+            description: `The event is now live. Click to view.`,
+            icon: 'CheckCircle',
+            variant: 'success',
+            href: `/event/${eventId}`,
+            type: 'general'
+        });
+
+        return { txHash, eventId };
+
+    } catch (err) {
+        this.handleContractError(err, 'create event');
+    }
   }
 
-  // --- The following functions are now placeholders and need to be implemented with the SDK ---
-  // The SDK docs provided don't cover these actions, so we'll simulate them.
-  
-  async placeBet(walletClient: WalletClient, account: Account, eventId: bigint, outcome: boolean, amount: bigint): Promise<Hex> {
-    console.log(`INTUITION_SDK: Simulating placeBet for event ${eventId}. This needs a real SDK implementation.`);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // In a real app, you would create a triple: (user, 'betsOn', eventId), with the amount and outcome as metadata.
-    return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
+  async placeBet(walletClient: WalletClient, account: Address, eventId: bigint, outcome: boolean, amountString: string): Promise<Hash> {
+    const address = this.getContractAddress();
+    if (!address) throw new Error('Contract address not configured');
+    if (!walletClient.account) throw new Error('Wallet client is not connected.');
+    
+    try {
+        const amount = parseEther(amountString);
+        
+        const { request } = await this.publicClient.simulateContract({
+        account: walletClient.account,
+        address: address,
+        abi: IntuitionBettingOracleAbi,
+        functionName: 'placeBet',
+        args: [eventId, outcome],
+        value: amount
+        });
+        return walletClient.writeContract(request);
+    } catch (err) {
+        this.handleContractError(err, 'place bet');
+    }
   }
 
-  async declareResult(walletClient: WalletClient, account: Account, eventId: bigint, outcome: boolean): Promise<Hex> {
-    console.log(`INTUITION_SDK: Simulating declareResult for event ${eventId}. This needs a real SDK implementation.`);
-    return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
+  async resolveEvent(walletClient: WalletClient, account: Address, eventId: bigint, outcome: boolean): Promise<Hash> {
+     const address = this.getContractAddress();
+     if (!address) throw new Error('Contract address not configured');
+     if (!walletClient.account) throw new Error('Wallet client is not connected.');
+     
+     try {
+        const { request } = await this.publicClient.simulateContract({
+            account: walletClient.account,
+            address: address,
+            abi: IntuitionBettingOracleAbi,
+            functionName: 'resolveEvent',
+            args: [eventId, outcome],
+        });
+        return walletClient.writeContract(request);
+    } catch (err) {
+        this.handleContractError(err, 'declare result');
+    }
   }
 
-  async cancelEvent(walletClient: WalletClient, account: Account, eventId: bigint): Promise<Hex> {
-     console.log(`INTUITION_SDK: Simulating cancelEvent for event ${eventId}. This needs a real SDK implementation.`);
-     return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
+  async cancelEvent(walletClient: WalletClient, account: Address, eventId: bigint): Promise<Hash> {
+    const address = this.getContractAddress();
+    if (!address) throw new Error('Contract address not configured');
+    if (!walletClient.account) throw new Error('Wallet client is not connected.');
+    try {
+        const { request } = await this.publicClient.simulateContract({
+            account: walletClient.account,
+            address: address,
+            abi: IntuitionBettingOracleAbi,
+            functionName: 'cancelEvent',
+            args: [eventId],
+        });
+        return walletClient.writeContract(request);
+    } catch (err) {
+        this.handleContractError(err, 'cancel event');
+    }
   }
 
-  async claimWinnings(walletClient: WalletClient, account: Account, eventId: bigint): Promise<Hex> {
-    console.log(`INTUITION_SDK: Simulating claimWinnings for event ${eventId}. This needs a real SDK implementation.`);
-    return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
-  }
-  
-  async claimRefund(walletClient: WalletClient, account: Account, eventId: bigint): Promise<Hex> {
-      console.log(`INTUITION_SDK: Simulating claimRefund for event ${eventId}. This needs a real SDK implementation.`);
-      return `0x${Array(64).fill(0).map(() => Math.floor(Math.random()*16).toString(16)).join('')}` as Hex;
-  }
-  
-  async getAllBettors(): Promise<Address[]> {
-    console.log("INTUITION_SDK: Returning empty bettors array. This needs a real SDK implementation.");
-    return [];
+  async claim(walletClient: WalletClient, account: Address, eventId: bigint): Promise<Hash> {
+    const address = this.getContractAddress();
+    if (!address) throw new Error('Contract address not configured');
+    if (!walletClient.account) throw new Error('Wallet client is not connected or account is not available.');
+
+    try {
+        const { request } = await this.publicClient.simulateContract({
+            account: walletClient.account,
+            address: address,
+            abi: IntuitionBettingOracleAbi,
+            functionName: 'claim',
+            args: [eventId],
+        });
+        return walletClient.writeContract(request);
+    } catch (err) {
+        this.handleContractError(err, 'claim winnings');
+    }
   }
 
-  async waitForTransaction(hash: Hash) {
+  async waitForTransaction(hash: Hash): Promise<TransactionReceipt> {
     return this.publicClient.waitForTransactionReceipt({ hash });
   }
 }

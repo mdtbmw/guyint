@@ -2,14 +2,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  experimental: {
-    turbopack: {
-      // This helps Turbopack resolve the correct project root, fixing the build error.
-      resolveAlias: {
-        '.': '.',
-      },
-    },
-  },
+  /* config options here */
   images: {
     remotePatterns: [
       {
@@ -25,8 +18,26 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
+        protocol: 'https' ,
         hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.postimg.cc',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.im.ge',
         port: '',
         pathname: '/**',
       },
