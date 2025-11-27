@@ -9,8 +9,8 @@ import type {
   Result,
   Interface,
   ContractTransaction,
-  ContractEvent,
   ContractMethod,
+  Listener,
 } from "ethers";
 
 export type EventLog = {
@@ -41,7 +41,7 @@ export type TypedEvent<
   readonly args: TArgsArray & TArgsObject;
 };
 
-export interface TypedContractEvent<
+export interface ContractEvent<
   T extends TypedEvent,
   TName extends string = string
 > {
